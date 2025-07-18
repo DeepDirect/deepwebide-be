@@ -19,8 +19,57 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // 웹, JPA, 보안, 검증
+    // Spring MVC, REST API, 내장 톰캣 서버 포함
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Spring Data JPA + Hibernate 포함. DB 연동과 ORM 처리
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//    // 로그인/회원가입 등 보안 기능 제공
+//    implementation 'org.springframework.boot:spring-boot-starter-security'
+    // @Valid, @NotBlank 등 Bean Validation 처리
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // DB
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+    // AWS S3 (파일 업로드 및 다운로드를 위한 라이브러리)
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.673'
+
+    // 이메일 발송 기능
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // coolsms (Coolsms API)
+    implementation 'net.nurigo:sdk:4.3.2'
+
+    // WebSocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // Redis
+    implementation 'io.lettuce:lettuce-core'
+
+    // DevTools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // 테스트 관련 라이브러리
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
