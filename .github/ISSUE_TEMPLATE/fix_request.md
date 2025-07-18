@@ -1,9 +1,18 @@
 ---
 name: 🛠️ 버그 수정 요청
 about: 기존 버그를 수정하거나 비정상 동작을 바로잡기 위한 작업을 등록합니다.
-title: "[Fix] "
+title: "[BE][Fix] "
 labels: ["bug", "fix"]
 assignees: []
+
+---
+
+## 🗂️ Epic 및 일정
+Jira **에픽/시작일/기한**을 아래에 입력하세요.
+
+- epic: DP-6
+- start: 2025-07-18
+- due: 2025-07-22
 
 ---
 
