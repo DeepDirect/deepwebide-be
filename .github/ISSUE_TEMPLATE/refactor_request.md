@@ -1,9 +1,18 @@
 ---
 name: ♻️ 리팩터링 요청
 about: 코드 개선이나 구조 변경 등 기능 변경 없이 내부 품질을 개선하는 작업을 등록합니다.
-title: "[Refactor] "
+title: "[BE][Refactor] "
 labels: ["refactor"]
 assignees: []
+
+---
+
+## 🗂️ Epic 및 일정
+Jira **에픽/시작일/기한**을 아래에 입력하세요.
+
+- epic: DP-6
+- start: 2025-07-18
+- due: 2025-07-22
 
 ---
 
