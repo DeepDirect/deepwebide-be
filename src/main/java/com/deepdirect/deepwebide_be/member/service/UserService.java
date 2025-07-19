@@ -29,7 +29,7 @@ public class UserService {
             throw new GlobalException(ErrorCode.INVALID_USERNAME);
         }
 
-        if (!request.getEmail().equals(request.getPasswordCheck())) {
+        if (!request.getPassword().equals(request.getPasswordCheck())) {
             throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
         }
 
