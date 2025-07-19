@@ -9,11 +9,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "nickname"),
-        @UniqueConstraint(columnNames = "email"),
-        @UniqueConstraint(columnNames = "phoneNumber")
-})
+@ToString(exclude = "password")
+@Table(name = "users")
 public class User {
 
     @Id
@@ -49,15 +46,12 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    /**
-     * 회원가입
-     */
     public User(String username, String nickname, String email, String phoneNumber, String password, String profileImageUrl) {
         this.username = username;
         this.nickname = nickname;
         this.email = email;
         this.phoneNumber = phoneNumber;
-        this.password = password;
+        this.password = password; // TODO: 해싱 처리
         this.profileImageUrl = profileImageUrl;
     }
 }
