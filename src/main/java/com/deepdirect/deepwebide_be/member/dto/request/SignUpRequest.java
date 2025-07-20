@@ -20,11 +20,11 @@ public class SignUpRequest {
     private String username;
 
     @NotBlank(message = "비밀번호 입력이 누락되었습니다.")
-    @Schema(description = "비밀번호", example = "1q2w3e4r!@#")
+    @Schema(description = "비밀번호", example = "1Q2w3e4r!@#")
     private String password;
 
     @NotBlank(message = "비밀번호 확인 입력이 누락되었습니다.")
-    @Schema(description = "비밀번호 확인", example = "1q2w3e4r!@#")
+    @Schema(description = "비밀번호 확인", example = "1Q2w3e4r!@#")
     private String passwordCheck;
 
     @NotBlank(message = "전화번호 입력이 누락되었습니다.")
