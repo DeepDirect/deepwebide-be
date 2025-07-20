@@ -12,7 +12,6 @@ import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.regex.Pattern;
 import java.util.List;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +36,11 @@ public class UserService {
 
         if (!PASSWORD_REGEX.matcher(request.getPassword()).matches()) {
             throw new GlobalException(ErrorCode.INVALID_PASSWORD_FORMAT);
+        }
+
+        // 이메일 중복 확인 api가 따로 있더라도, 회원가입 로직 자체에서도 데이터 무결성을 지키기 위해 중복확인을 해줘야 합니다!
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new GlobalException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
