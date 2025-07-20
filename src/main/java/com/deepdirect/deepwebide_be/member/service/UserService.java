@@ -22,7 +22,9 @@ public class UserService {
     private static final Pattern PASSWORD_REGEX = Pattern.compile(PASSWORD_PATTERN);
     private static final String NAME_PATTERN = "^[가-힣]{2,20}$";
     private static final Pattern NAME_REGEX = Pattern.compile(NAME_PATTERN);
-    private final PasswordEncoder PasswordEncoder;
+//    private final PasswordEncoder PasswordEncoder;
+//    자바에서 변수명은 camelCase로 작성해야 합니다..!(소문자로 시작해야해요)
+    private final PasswordEncoder passwordEncoder;
 
     public SignUpResponse signup(SignUpRequest request) {
         if (!NAME_REGEX.matcher(request.getUsername()).matches()) {
@@ -37,7 +39,7 @@ public class UserService {
             throw new GlobalException(ErrorCode.INVALID_PASSWORD_FORMAT);
         }
 
-        String encodedPassword = PasswordEncoder.encode(request.getPassword());
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
         String nickname = generateUniqueNickname(NicknameGenerator.generate());
 
         User user = userRepository.save(User.builder()
