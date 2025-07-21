@@ -47,4 +47,15 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    public Long getUserIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token.replace("Bearer ", "")) // "Bearer " 제거
+                .getBody();
+
+        return Long.parseLong(claims.getSubject()); // userId는 subject에 저장됨
+    }
+
 }
