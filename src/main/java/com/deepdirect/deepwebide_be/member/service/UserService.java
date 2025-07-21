@@ -2,6 +2,7 @@ package com.deepdirect.deepwebide_be.member.service;
 
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
+import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
@@ -27,6 +28,7 @@ public class UserService {
     private static final Pattern NAME_REGEX = Pattern.compile(NAME_PATTERN);
 
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -92,7 +94,7 @@ public class UserService {
             throw new GlobalException(ErrorCode.WRONG_PASSWORD);
         }
 
-        String accessToken = ""; // TODO: JWT 추가
+        String accessToken = jwtTokenProvider.createToken(user.getId());
 
         return new SignInResponse(accessToken, new SignInUserDto(user));
     }
