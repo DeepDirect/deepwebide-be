@@ -71,6 +71,10 @@ public class UserService {
             throw new GlobalException(ErrorCode.DUPLICATE_EMAIL);
         }
 
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new GlobalException(ErrorCode.PHONE_NUMBER_ALREADY_USED);
+        }
+
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         String nickname = generateUniqueNickname(NicknameGenerator.generate());
 
@@ -78,6 +82,7 @@ public class UserService {
                 .username(request.getUsername())
                 .nickname(nickname)
                 .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
                 .password(encodedPassword)
                 .profileImageUrl("") // TODO: 이미지 url 생성 추가
                 .emailVerified(true) // TODO: 이메일 인증 추가

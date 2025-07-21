@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // 이메일 중복 확인
     boolean existsByEmail(String email);
 
+    boolean existsByPhoneNumber(String phoneNumber);
+
     // 닉네임 중복 확인
     boolean existsByNickname(String nickname);
 
