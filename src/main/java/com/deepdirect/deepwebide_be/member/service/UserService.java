@@ -1,5 +1,12 @@
 package com.deepdirect.deepwebide_be.member.service;
 
+import java.util.List;
+import java.util.regex.Pattern;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
@@ -9,13 +16,10 @@ import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInUserDto;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import com.deepdirect.deepwebide_be.member.util.NicknameGenerator;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
-import org.springframework.stereotype.Service;
-import java.util.regex.Pattern;
-import java.util.List;
+import com.deepdirect.deepwebide_be.member.util.NicknameGenerator;
+
+import lombok.RequiredArgsConstructor;
 
 
 @Service
@@ -49,6 +53,7 @@ public class UserService {
         return baseNickname + maxSuffix;
     }
 
+    @Transactional
     public SignUpResponse signup(SignUpRequest request) {
         if (!NAME_REGEX.matcher(request.getUsername()).matches()) {
             throw new GlobalException(ErrorCode.INVALID_USERNAME);
@@ -86,6 +91,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public SignInResponse signIn(SignInRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
