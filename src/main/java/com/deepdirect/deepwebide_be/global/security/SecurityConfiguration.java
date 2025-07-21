@@ -40,15 +40,18 @@ public class SecurityConfiguration {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .headers(headers ->
+                        headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/swagger-ui/**"),
-                                new AntPathRequestMatcher("/v3/api-docs/**"),
-                                new AntPathRequestMatcher("/swagger-resources/**"),
-                                new AntPathRequestMatcher("/webjars/**"),
-                                new AntPathRequestMatcher("/api/auth/**")
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                    .requestMatchers(
+                        new AntPathRequestMatcher("/swagger-ui/**"),
+                        new AntPathRequestMatcher("/v3/api-docs/**"),
+                        new AntPathRequestMatcher("/swagger-resources/**"),
+                        new AntPathRequestMatcher("/webjars/**"),
+                        new AntPathRequestMatcher("/api/auth/**"),
+                        new AntPathRequestMatcher("/h2-console/**")
+                    ).permitAll()
+                    .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults());
 
