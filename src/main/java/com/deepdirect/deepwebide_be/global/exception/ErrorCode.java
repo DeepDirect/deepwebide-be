@@ -23,6 +23,8 @@ public enum ErrorCode {
     ORDER_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "이미 완료된 주문입니다."),
     ORDER_ALREADY_SHIPPING(HttpStatus.BAD_REQUEST, "이미 배송중인 주문입니다."),
     ORDER_ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "이미 취소된 주문입니다."),
+    REPOSITORY_NAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST,"이미 동일한 이름의 레포지토리가 존재합니다."),
+
 
     INVALID_USERNAME(HttpStatus.BAD_REQUEST, "이름은 한글 2자 이상만 입력 가능합니다."),
     INVALID_PASSWORD_FORMAT(HttpStatus.BAD_REQUEST, "비밀번호는 영어 소문자, 숫자, 특수문자를 모두 포함해야 합니다."),
