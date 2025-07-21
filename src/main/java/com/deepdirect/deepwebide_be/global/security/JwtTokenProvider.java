@@ -52,10 +52,8 @@ public class JwtTokenProvider {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(secretKey)
                 .build()
-                .parseClaimsJws(token.replace("Bearer ", "")) // "Bearer " 제거
+                .parseClaimsJws(token)
                 .getBody();
-
-        return Long.parseLong(claims.getSubject()); // userId는 subject에 저장됨
+        return Long.valueOf(claims.getSubject());
     }
-
 }

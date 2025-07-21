@@ -4,6 +4,7 @@ import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -40,16 +41,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponseDto<Map<String, String>>> handleValidationException(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> {
-            errors.put(error.getField(), error.getDefaultMessage());
-        });
+    public ResponseEntity<ApiResponseDto<Void>> handleValidationException(MethodArgumentNotValidException ex) {
+        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("입력값이 유효하지 않습니다.");
 
-        return ResponseEntity
-                .badRequest()
-                .body(ApiResponseDto.of(400, "입력값이 유효하지 않습니다.", errors));
+        return ResponseEntity.badRequest()
+                .body(ApiResponseDto.error(400, errorMessage));
     }
+
 
     @ExceptionHandler(GlobalException.class)
     public ResponseEntity<ApiResponseDto<?>> handleGlobalException(GlobalException ex) {
