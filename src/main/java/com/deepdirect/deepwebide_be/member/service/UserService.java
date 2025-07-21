@@ -3,7 +3,10 @@ package com.deepdirect.deepwebide_be.member.service;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
+import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
+import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
+import com.deepdirect.deepwebide_be.member.dto.response.SignInUserDto;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.regex.Pattern;
 import java.util.List;
 
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -21,9 +25,27 @@ public class UserService {
     private static final Pattern PASSWORD_REGEX = Pattern.compile(PASSWORD_PATTERN);
     private static final String NAME_PATTERN = "^[가-힣]{2,20}$";
     private static final Pattern NAME_REGEX = Pattern.compile(NAME_PATTERN);
-//    private final PasswordEncoder PasswordEncoder;
-//    자바에서 변수명은 camelCase로 작성해야 합니다..!(소문자로 시작해야해요)
+
     private final PasswordEncoder passwordEncoder;
+
+    private String generateUniqueNickname(String baseNickname) {
+        if (!userRepository.existsByNickname(baseNickname)) {
+            return baseNickname;
+        }
+
+        List<String> existingNicknames = userRepository.findNicknamesByPrefix(baseNickname);
+
+        int maxSuffix = 0;
+        for (String nickname : existingNicknames) {
+            String suffix = nickname.substring(baseNickname.length());
+            if (suffix.matches("\\d+")) {
+                int num = Integer.parseInt(suffix);
+                maxSuffix = Math.max(maxSuffix, num + 1);
+            }
+        }
+
+        return baseNickname + maxSuffix;
+    }
 
     public SignUpResponse signup(SignUpRequest request) {
         if (!NAME_REGEX.matcher(request.getUsername()).matches()) {
@@ -38,7 +60,6 @@ public class UserService {
             throw new GlobalException(ErrorCode.INVALID_PASSWORD_FORMAT);
         }
 
-        // 이메일 중복 확인 api가 따로 있더라도, 회원가입 로직 자체에서도 데이터 무결성을 지키기 위해 중복확인을 해줘야 합니다!
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new GlobalException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -63,22 +84,16 @@ public class UserService {
                 .build();
     }
 
-    private String generateUniqueNickname(String baseNickname) {
-        if (!userRepository.existsByNickname(baseNickname)) {
-            return baseNickname;
+    public SignInResponse signIn(SignInRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new GlobalException(ErrorCode.WRONG_PASSWORD);
         }
 
-        List<String> existingNicknames = userRepository.findNicknamesByPrefix(baseNickname);
+        String accessToken = ""; // TODO: JWT 추가
 
-        int maxSuffix = 0;
-        for (String nickname : existingNicknames) {
-            String suffix = nickname.substring(baseNickname.length());
-            if (suffix.matches("\\d+")) {
-                int num = Integer.parseInt(suffix);
-                maxSuffix = Math.max(maxSuffix, num + 1);
-            }
-        }
-
-        return baseNickname + maxSuffix;
+        return new SignInResponse(accessToken, new SignInUserDto(user));
     }
 }
