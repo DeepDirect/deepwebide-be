@@ -33,6 +33,7 @@ public class UserService {
 
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final ProfileImageService profileImageService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -78,13 +79,15 @@ public class UserService {
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         String nickname = generateUniqueNickname(NicknameGenerator.generate());
 
+        String profileImageUrl = profileImageService.generateProfileImageUrl(nickname, 48);
+
         User user = userRepository.save(User.builder()
                 .username(request.getUsername())
                 .nickname(nickname)
                 .email(request.getEmail())
                 .phoneNumber(request.getPhoneNumber())
                 .password(encodedPassword)
-                .profileImageUrl("") // TODO: 이미지 url 생성 추가
+                .profileImageUrl(profileImageUrl)
                 .emailVerified(true) // TODO: 이메일 인증 추가
                 .build());
 
