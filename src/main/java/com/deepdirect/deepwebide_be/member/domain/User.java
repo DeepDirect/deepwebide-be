@@ -53,7 +53,7 @@ public class User {
         this.nickname = nickname;
         this.email = email;
         this.phoneNumber = phoneNumber;
-        this.password = password; // TODO: 해싱 처리
+        this.password = password;
         this.profileImageUrl = profileImageUrl;
     }
 }
