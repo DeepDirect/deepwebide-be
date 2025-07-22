@@ -7,6 +7,7 @@ import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeResponse;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +24,7 @@ public class RepositoryEntryCodeService {
     private final RepositoryRepository repositoryRepository;
     private final RepositoryEntryCodeRepository entryCodeRepository;
 
-    private static final int ENTRY_CODE_LENGTH = 8;
-    private static final int MAX_TRY_COUNT = 10;
-
-    @Transactional(readOnly = true)
+    @Transactional
     public RepositoryEntryCodeResponse getEntryCode(Long repositoryId, Long userId) {
 
         Repository repo = repositoryRepository.findById(repositoryId)
@@ -40,8 +38,9 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
         }
 
-        RepositoryEntryCode entryCode = entryCodeRepository.findByRepositoryIdAndExpiresAtAfter(repo.getId(), LocalDateTime.now())
-                .orElseGet(() -> createNewEntryCode(repo));
+        RepositoryEntryCode entryCode = entryCodeRepository
+                .findByRepositoryIdAndExpiresAtAfter(repo.getId(), LocalDateTime.now())
+                .orElseGet(() -> regenerateEntryCodeInternal(repo));
 
         return RepositoryEntryCodeResponse.builder()
                 .repositoryId(repo.getId())
@@ -69,41 +68,20 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
         }
 
-        RepositoryEntryCode newCode = createNewEntryCode(repo);
-        return newCode.getEntryCode();
+        return regenerateEntryCodeInternal(repo).getEntryCode();
     }
 
+    /**
+     * 내부에서 엔트리 코드를 재생성하고 업데이트하는 로직
+     */
+    private RepositoryEntryCode regenerateEntryCodeInternal(Repository repo) {
+        RepositoryEntryCode entryCode = entryCodeRepository.findByRepositoryId(repo.getId())
+                .orElseThrow(() -> new GlobalException(ErrorCode.ENTRY_CODE_NOT_FOUND));
 
-
-    private RepositoryEntryCode createNewEntryCode(Repository repo) {
-        String code = generateUniqueEntryCode();
-
-        RepositoryEntryCode entryCode = RepositoryEntryCode.builder()
-                .repository(repo)
-                .entryCode(code)
-                .expiresAt(LocalDateTime.now().plusDays(3))
-                .build();
-
-        return entryCodeRepository.save(entryCode);
+        String newCode = EntryCodeGenerator.generateUniqueCode(entryCodeRepository::existsByEntryCode);
+        entryCode.updateEntryCode(newCode, LocalDateTime.now().plusDays(3));
+        return entryCode;
     }
 
-    private String generateUniqueEntryCode() {
-        for (int i = 0; i < MAX_TRY_COUNT; i++) {
-            String code = generateRandomCode(ENTRY_CODE_LENGTH);
-            boolean exists = entryCodeRepository.existsByEntryCode(code);
-            if (!exists) return code;
-        }
-        throw new GlobalException(ErrorCode.ENTRY_CODE_GENERATION_FAILED);
-    }
-
-    private String generateRandomCode(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder(length);
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        for (int i = 0; i < length; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return sb.toString();
-    }
 }
 
