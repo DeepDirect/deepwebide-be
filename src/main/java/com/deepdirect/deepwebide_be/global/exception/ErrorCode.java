@@ -24,6 +24,10 @@ public enum ErrorCode {
     ORDER_ALREADY_SHIPPING(HttpStatus.BAD_REQUEST, "이미 배송중인 주문입니다."),
     ORDER_ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "이미 취소된 주문입니다."),
     REPOSITORY_NAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST,"이미 동일한 이름의 레포지토리가 존재합니다."),
+    REPOSITORY_NOT_SHARED(HttpStatus.BAD_REQUEST, "공유된 레포지토리가 아닙니다."),
+    ENTRY_CODE_ACCESS_DENIED(HttpStatus.BAD_REQUEST, "오너만 확인할 수 있습니다."),
+    ENTRY_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "입장 코드가 만료되었습니다."),
+
 
 
     INVALID_USERNAME(HttpStatus.BAD_REQUEST, "이름은 한글 2자 이상만 입력 가능합니다."),
@@ -61,12 +65,14 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
     PRODUCT_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "상품 이미지가 존재하지 않습니다."),
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 요청 기록이 없습니다."),
+    REPOSITORY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않은 레포지토리 입니다."),
 
     // 409 CONFLICT
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다."),
     EMAIL_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 인증이 완료된 계정입니다."),
 
     // 500 INTERNAL SERVER ERROR
+    ENTRY_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "입장 코드 생성에 실패했습니다. 다시 시도해주세요."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
     SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 발송 실패");
 
