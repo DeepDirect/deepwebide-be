@@ -94,7 +94,7 @@ public class PhoneVerificationService {
     }
 
     // 인증코드 검증 및 인증 여부 저장
-    public void verifyCode(String phoneNumber, String code) {
+    public boolean verifyCode(String phoneNumber, String code) {
         PhoneVerification verification = phoneVerificationRepository
                 .findTopByPhoneNumberAndPhoneCodeOrderByCreatedAtDesc(phoneNumber, code)
                         .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
@@ -108,5 +108,7 @@ public class PhoneVerificationService {
         }
 
         verification.verify();
+
+        return true;
     }
 }
