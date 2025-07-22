@@ -1,9 +1,13 @@
 package com.deepdirect.deepwebide_be.member.domain;
 
+import com.deepdirect.deepwebide_be.repository.domain.Repository;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryFavorite;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -42,6 +46,14 @@ public class User {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "owner")
+    private List<Repository> repositories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RepositoryFavorite> favorites = new ArrayList<>();
+
+
 
     @PrePersist
     protected void onCreate() {
