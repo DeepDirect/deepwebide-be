@@ -5,15 +5,12 @@ import com.deepdirect.deepwebide_be.member.dto.request.PhoneVerificationRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.PhoneVerifyCodeRequest;
 import com.deepdirect.deepwebide_be.member.dto.response.PhoneVerificationResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.PhoneVerifyCodeResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
 import com.deepdirect.deepwebide_be.member.service.PhoneVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @CrossOrigin(
         origins = {
