@@ -11,4 +11,6 @@ public interface RepositoryEntryCodeRepository extends JpaRepository<RepositoryE
     Optional<RepositoryEntryCode> findByRepositoryIdAndExpiresAtAfter(Long repositoryId, LocalDateTime now);
 
     boolean existsByEntryCode(String entryCode);
+
+    Optional<RepositoryEntryCode> findByRepositoryId(Long id);
 }
