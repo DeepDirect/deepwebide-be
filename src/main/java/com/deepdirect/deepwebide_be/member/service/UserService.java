@@ -3,9 +3,12 @@ package com.deepdirect.deepwebide_be.member.service;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -129,5 +132,47 @@ public class UserService {
 
         // 4. 액세스 토큰만 응답 본문으로 전달
         return new SignInResponse(accessToken, new SignInUserDto(user));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponseDto<Void>> signOut(
+            String authorizationHeader,
+            HttpServletResponse response
+    ) {
+        // 1. accessToken 추출 및 검증
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponseDto.of(401, "유효하지 않은 토큰입니다.", null));
+        }
+
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        if (!jwtTokenProvider.validateToken(accessToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponseDto.of(401, "유효하지 않은 토큰입니다.", null));
+        }
+
+        // 2. userId 추출
+        Long userId = jwtTokenProvider.getUserIdFromToken(accessToken);
+
+        // 3. Redis에서 refreshToken 삭제
+        refreshTokenService.delete(userId);
+
+        // 4-1. 쿠키 만료 (refreshToken)
+        Cookie cookie = new Cookie("refreshToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // 운영환경에서만 true, 개발은 false도 가능
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
+        // 4-2. SameSite=Strict를 명시적으로 추가 (헤더로)
+        // 기존 Set-Cookie 헤더와 옵션이 똑같아야 브라우저가 제대로 인식함!
+        response.setHeader(
+                "Set-Cookie",
+                "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+        );
+
+        // 5. 성공 응답
+        return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 }

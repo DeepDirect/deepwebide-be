@@ -43,4 +43,12 @@ public class UserController {
         // response(본문)는 AccessToken만, RefreshToken은 쿠키로 헤더에 내려감!
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그인에 성공했습니다.", response));
     }
+
+    @PostMapping("/signout")
+    public ResponseEntity<ApiResponseDto<Void>> signOut(
+            @RequestHeader("Authorization") String authorizationHeader,
+            HttpServletResponse response
+    ) {
+        return userService.signOut(authorizationHeader, response);
+    }
 }
