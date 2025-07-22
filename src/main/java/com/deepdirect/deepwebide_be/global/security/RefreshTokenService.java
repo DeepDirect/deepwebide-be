@@ -10,11 +10,13 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class RefreshTokenService {
     private final StringRedisTemplate redisTemplate;
+    private final JwtTokenProvider jwtTokenProvider;
 
     // 리프레시 토큰 저장 (userId를 Long으로 받아 String으로 변환)
-    public void save(Long userId, String refreshToken, long expireSeconds) {
+    public void save(Long userId, String refreshToken) {
+        long expireMillis = jwtTokenProvider.getRefreshTokenExpireMillis();
         redisTemplate.opsForValue()
-                .set(String.valueOf(userId), refreshToken, Duration.ofSeconds(expireSeconds));
+                .set(String.valueOf(userId), refreshToken, Duration.ofMillis(expireMillis));
     }
 
     // 리프레시 토큰 조회
