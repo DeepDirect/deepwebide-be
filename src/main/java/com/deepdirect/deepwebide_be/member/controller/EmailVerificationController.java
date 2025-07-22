@@ -1,6 +1,5 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
-import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.member.service.EmailVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,7 @@ import java.util.Map;
 )
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/auth")
+@RequestMapping("/api/auth/email")
 public class EmailVerificationController {
 
     private final EmailVerificationService emailVerificationService;
@@ -27,8 +26,8 @@ public class EmailVerificationController {
     @Operation(
             summary = "이메일 인증"
     )
-    @GetMapping("/email/send-code")
-    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String code) {
+    @GetMapping("/send-code")
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody String code) {
         boolean result = emailVerificationService.verifyEmailCode(code);
         Map<String, Object> response = new HashMap<>();
 
