@@ -8,10 +8,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,4 +29,20 @@ public class RepositoryEntryCodeController {
         RepositoryEntryCodeResponse response = entryCodeService.getEntryCode(repositoryId, userDetails.getId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "입장코드 확인이 성공했습니다.", response));
     }
+
+    @PostMapping("/{repositoryId}/new-entrycode")
+    public ResponseEntity<ApiResponseDto<Map<String, String>>> regenerateEntryCode(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        String newCode = entryCodeService.regenerateEntryCode(repositoryId, userDetails.getId());
+
+        Map<String, String> data = new HashMap<>();
+        data.put("newEntryCode", newCode);
+
+        return ResponseEntity.ok(
+                ApiResponseDto.of(200, "입장코드가 재발급 되셨습니다.", data)
+        );
+    }
+
 }

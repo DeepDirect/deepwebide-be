@@ -56,6 +56,24 @@ public class RepositoryEntryCodeService {
                 .build();
     }
 
+    @Transactional
+    public String regenerateEntryCode(Long repositoryId, Long userId) {
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.getOwner().getId().equals(userId)) {
+            throw new GlobalException(ErrorCode.ENTRY_CODE_REISSUE_DENIED);
+        }
+
+        if (!repo.isShared()) {
+            throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
+        }
+
+        RepositoryEntryCode newCode = createNewEntryCode(repo);
+        return newCode.getEntryCode();
+    }
+
+
 
     private RepositoryEntryCode createNewEntryCode(Repository repo) {
         String code = generateUniqueEntryCode();
