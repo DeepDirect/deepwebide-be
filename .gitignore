@@ -135,3 +135,5 @@ application-*.properties
 
 # H2 저장 디렉터리 (예: ./data/)
 data/
+
+docker-compose.yml
