@@ -80,8 +80,7 @@ public class RepositoryService {
     public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+                pageable.getPageSize()
         );
 
         Page<Repository> repositoryPage = repositoryRepository
@@ -103,8 +102,7 @@ public class RepositoryService {
     public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+                pageable.getPageSize()
         );
 
         Page<Repository> repositoryPage = repositoryRepository
