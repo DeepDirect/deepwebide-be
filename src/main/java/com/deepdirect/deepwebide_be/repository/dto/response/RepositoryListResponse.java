@@ -7,11 +7,11 @@ import java.util.List;
 
 @Getter
 @Builder
-public class SharedRepositoryListResponse {
+public class RepositoryListResponse {
 
     private int currentPage;
     private int pageSize;
     private int totalPages;
     private long totalElements;
-    private List<SharedRepositoryResponse> repositories;
+    private List<RepositoryResponse> repositories;
 }

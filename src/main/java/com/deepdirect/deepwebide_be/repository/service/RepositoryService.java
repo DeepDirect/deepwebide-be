@@ -9,8 +9,8 @@ import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
-import com.deepdirect.deepwebide_be.repository.dto.response.SharedRepositoryResponse;
-import com.deepdirect.deepwebide_be.repository.dto.response.SharedRepositoryListResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -55,7 +55,7 @@ public class RepositoryService {
                 .build();
     }
 
-    public SharedRepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize()
@@ -64,11 +64,11 @@ public class RepositoryService {
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<SharedRepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(SharedRepositoryResponse::from)
+        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
+                .map(RepositoryResponse::from)
                 .collect(Collectors.toList());
 
-        return SharedRepositoryListResponse.builder()
+        return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
                 .pageSize(repositoryPage.getSize())
                 .totalPages(repositoryPage.getTotalPages())
@@ -77,7 +77,7 @@ public class RepositoryService {
                 .build();
     }
 
-    public SharedRepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
@@ -88,11 +88,33 @@ public class RepositoryService {
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<SharedRepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(SharedRepositoryResponse::from)
+        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
+                .map(RepositoryResponse::from)
                 .collect(Collectors.toList());
 
-        return SharedRepositoryListResponse.builder()
+        return RepositoryListResponse.builder()
+                .currentPage(repositoryPage.getNumber())
+                .pageSize(repositoryPage.getSize())
+                .totalPages(repositoryPage.getTotalPages())
+                .totalElements(repositoryPage.getTotalElements())
+                .repositories(sharedRepositoryDtos)
+                .build();
+    }
+    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+        );
+
+        Page<Repository> repositoryPage = repositoryRepository
+                .findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
+
+        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
+                .map(RepositoryResponse::from)
+                .collect(Collectors.toList());
+
+        return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
                 .pageSize(repositoryPage.getSize())
                 .totalPages(repositoryPage.getTotalPages())

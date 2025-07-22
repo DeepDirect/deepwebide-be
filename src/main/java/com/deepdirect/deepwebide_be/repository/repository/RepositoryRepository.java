@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
     boolean existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(String repositoryName, Long ownerId);
+    Page<Repository> findByOwnerIdAndDeletedAtIsNull(Long ownerId, Pageable pageable);
     Page<Repository> findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(Long ownerId, Pageable pageable);
     Page<Repository> findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(Long userId, RepositoryMemberRole role, Pageable pageable);
 }
