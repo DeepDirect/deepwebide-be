@@ -4,32 +4,26 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class RefreshTokenService {
     private final StringRedisTemplate redisTemplate;
-    private static final long REFRESH_TOKEN_EXPIRE_DAYS = 14; // 2주
 
-    // 저장
-    public void saveRefreshToken(Long userId, String refreshToken) {
-        redisTemplate.opsForValue().set(
-                getKey(userId),
-                refreshToken,
-                REFRESH_TOKEN_EXPIRE_DAYS,
-                TimeUnit.DAYS
-        );
+    // 리프레시 토큰 저장 (userId를 Long으로 받아 String으로 변환)
+    public void save(Long userId, String refreshToken, long expireSeconds) {
+        redisTemplate.opsForValue()
+                .set(String.valueOf(userId), refreshToken, Duration.ofSeconds(expireSeconds));
     }
-    // 조회
-    public String getRefreshToken(Long userId) {
-        return redisTemplate.opsForValue().get(getKey(userId));
+
+    // 리프레시 토큰 조회
+    public String findByUserId(Long userId) {
+        return redisTemplate.opsForValue().get(String.valueOf(userId));
     }
-    // 삭제
-    public void deleteRefreshToken(Long userId) {
-        redisTemplate.delete(getKey(userId));
-    }
-    private String getKey(Long userId) {
-        return "refresh:" + userId;
+
+    // 리프레시 토큰 삭제
+    public void delete(Long userId) {
+        redisTemplate.delete(String.valueOf(userId));
     }
 }
