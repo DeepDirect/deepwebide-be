@@ -45,8 +45,7 @@ public class RepositoryController {
     public ResponseEntity<ApiResponseDto<SharedRepositoryListResponse>> getSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "7") int size,
-            @RequestParam(defaultValue = "false") boolean liked
+            @RequestParam(defaultValue = "7") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
         SharedRepositoryListResponse response = repositoryService.getSharedRepositories(userDetails.getId(), pageable);

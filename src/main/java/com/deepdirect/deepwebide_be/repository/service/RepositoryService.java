@@ -57,8 +57,7 @@ public class RepositoryService {
     public SharedRepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+                pageable.getPageSize()
         );
 
         Page<Repository> repositoryPage = repositoryRepository
