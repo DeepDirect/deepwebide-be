@@ -1,5 +1,8 @@
 set -e
 
+# 0. application-env.properties 경로 변수
+ENV_FILE="src/main/resources/application-env.properties"
+
 # 1. 랜덤 비밀번호 생성
 REDIS_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)
 export REDIS_PASSWORD
@@ -8,10 +11,10 @@ export REDIS_PASSWORD
 envsubst < docker-compose-template.yml > docker-compose.yml
 
 # 3. application-env.properties에 redis 비번 삽입/치환
-if grep -q '^spring.data.redis.password=' application-env.properties; then
-  sed -i '' "s/^spring\.data\.redis\.password=.*/spring.data.redis.password=$REDIS_PASSWORD/" application-env.properties
+if grep -q '^spring.data.redis.password=' "$ENV_FILE"; then
+  sed -i '' "s/^spring\.data\.redis\.password=.*/spring.data.redis.password=$REDIS_PASSWORD/" "$ENV_FILE"
 else
-  echo "spring.data.redis.password=$REDIS_PASSWORD" >> application-env.properties
+  echo "spring.data.redis.password=$REDIS_PASSWORD" >> "$ENV_FILE"
 fi
 
 echo "🧱 Redis 컨테이너 실행 중..."
