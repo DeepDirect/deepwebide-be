@@ -43,5 +43,11 @@ public class RepositoryEntryCode {
         this.repository = repository;
     }
 
+    public void updateEntryCode(String newCode, LocalDateTime newExpiresAt) {
+        this.entryCode = newCode;
+        this.expiresAt = newExpiresAt;
+    }
+
+
 }
 
