@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,10 +45,11 @@ public class RepositoryController {
     public ResponseEntity<ApiResponseDto<SharedRepositoryListResponse>> getSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "7") int size
+            @RequestParam(defaultValue = "7") int size,
+            @RequestParam(defaultValue = "false") boolean liked
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        SharedRepositoryListResponse response = repositoryService.getSharedRepositories(pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
+        SharedRepositoryListResponse response = repositoryService.getSharedRepositories(userDetails.getId(), pageable);
         return ResponseEntity.ok(ApiResponseDto.of(200, "공유 중인 레포 페이지 조회에 성공했습니다.", response));
     }
 }

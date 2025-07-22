@@ -13,10 +13,13 @@ import com.deepdirect.deepwebide_be.repository.dto.response.SharedRepositoryList
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -51,19 +54,26 @@ public class RepositoryService {
                 .build();
     }
 
-    public SharedRepositoryListResponse getSharedRepositories(Pageable pageable) {
-        Page<Repository> sharedRepos = repositoryRepository.findByIsSharedTrueAndDeletedAtIsNull(pageable);
+    public SharedRepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+        );
 
-        List<SharedRepositoryResponse> repositoryDtos = sharedRepos.getContent().stream()
+        Page<Repository> repositoryPage = repositoryRepository
+                .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
+
+        List<SharedRepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
                 .map(SharedRepositoryResponse::from)
-                .toList();
+                .collect(Collectors.toList());
 
         return SharedRepositoryListResponse.builder()
-                .currentPage(sharedRepos.getNumber())
-                .pageSize(sharedRepos.getSize())
-                .totalPages(sharedRepos.getTotalPages())
-                .totalElements(sharedRepos.getTotalElements())
-                .repositories(repositoryDtos)
+                .currentPage(repositoryPage.getNumber())
+                .pageSize(repositoryPage.getSize())
+                .totalPages(repositoryPage.getTotalPages())
+                .totalElements(repositoryPage.getTotalElements())
+                .repositories(sharedRepositoryDtos)
                 .build();
     }
 }
