@@ -51,4 +51,15 @@ public class RepositoryController {
         SharedRepositoryListResponse response = repositoryService.getSharedRepositories(userDetails.getId(), pageable);
         return ResponseEntity.ok(ApiResponseDto.of(200, "공유 중인 레포 페이지 조회에 성공했습니다.", response));
     }
+    @GetMapping("/shared/me")
+    @Operation(summary = "공유받은 레포 조회", description = "공유받은 레포지토리 목록을 페이지 단위로 조회합니다.")
+    public ResponseEntity<ApiResponseDto<SharedRepositoryListResponse>> getReceivedSharedRepositories(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "7") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
+        SharedRepositoryListResponse response = repositoryService.getReceivedSharedRepositories(userDetails.getId(), pageable);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "공유받은 레포 페이지 조회에 성공했습니다.", response));
+    }
 }

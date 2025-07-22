@@ -6,6 +6,7 @@ import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.SharedRepositoryResponse;
@@ -62,6 +63,30 @@ public class RepositoryService {
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
+
+        List<SharedRepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
+                .map(SharedRepositoryResponse::from)
+                .collect(Collectors.toList());
+
+        return SharedRepositoryListResponse.builder()
+                .currentPage(repositoryPage.getNumber())
+                .pageSize(repositoryPage.getSize())
+                .totalPages(repositoryPage.getTotalPages())
+                .totalElements(repositoryPage.getTotalElements())
+                .repositories(sharedRepositoryDtos)
+                .build();
+    }
+
+    public SharedRepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName"))
+        );
+
+        Page<Repository> repositoryPage = repositoryRepository
+                .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
+                        userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
         List<SharedRepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
                 .map(SharedRepositoryResponse::from)
