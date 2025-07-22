@@ -42,6 +42,11 @@ public class PhoneVerification {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
     // 인증 완료 처리
     public void verify() {
         this.verified = true;
