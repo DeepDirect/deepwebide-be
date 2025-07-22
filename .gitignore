@@ -124,3 +124,14 @@ HELP.md
 README.md
 
 application-*.properties
+
+# ===================
+# 🗄️ H2 Database
+# ===================
+
+# H2 DB 파일 (예: ./data/testdb.mv.db)
+*.mv.db
+*.trace.db
+
+# H2 저장 디렉터리 (예: ./data/)
+data/
