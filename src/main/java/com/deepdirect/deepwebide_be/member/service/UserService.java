@@ -135,20 +135,14 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponseDto<Void>> signOut(
-            String authorizationHeader,
-            HttpServletResponse response
-    ) {
+    public void signOut(String authorizationHeader, HttpServletResponse response) {
         // 1. accessToken 추출 및 검증
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponseDto.of(401, "유효하지 않은 토큰입니다.", null));
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
-
         String accessToken = authorizationHeader.replace("Bearer ", "");
         if (!jwtTokenProvider.validateToken(accessToken)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponseDto.of(401, "유효하지 않은 토큰입니다.", null));
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
         // 2. userId 추출
@@ -157,7 +151,7 @@ public class UserService {
         // 3. Redis에서 refreshToken 삭제
         refreshTokenService.delete(userId);
 
-        // 4-1. 쿠키 만료 (refreshToken)
+        // 4. 쿠키 만료 (refreshToken)
         Cookie cookie = new Cookie("refreshToken", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(true); // 운영환경에서만 true, 개발은 false도 가능
@@ -165,14 +159,10 @@ public class UserService {
         cookie.setMaxAge(0);
         response.addCookie(cookie);
 
-        // 4-2. SameSite=Strict를 명시적으로 추가 (헤더로)
-        // 기존 Set-Cookie 헤더와 옵션이 똑같아야 브라우저가 제대로 인식함!
+        // SameSite=Strict 명시적 추가
         response.setHeader(
                 "Set-Cookie",
                 "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
         );
-
-        // 5. 성공 응답
-        return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 }

@@ -49,6 +49,7 @@ public class UserController {
             @RequestHeader("Authorization") String authorizationHeader,
             HttpServletResponse response
     ) {
-        return userService.signOut(authorizationHeader, response);
+        userService.signOut(authorizationHeader, response);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 }
