@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.repository.repository;
 
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
@@ -11,4 +12,5 @@ public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
     boolean existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(String repositoryName, Long ownerId);
     Page<Repository> findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(Long ownerId, Pageable pageable);
+    Page<Repository> findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(Long userId, RepositoryMemberRole role, Pageable pageable);
 }
