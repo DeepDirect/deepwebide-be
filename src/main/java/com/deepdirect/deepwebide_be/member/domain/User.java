@@ -56,8 +56,6 @@ public class User {
     @Builder.Default
     private List<RepositoryFavorite> favorites = new ArrayList<>();
 
-
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -70,5 +68,9 @@ public class User {
         this.phoneNumber = phoneNumber;
         this.password = password;
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public void updatePassword(String newEncodedPassword) {
+        this.password = newEncodedPassword;
     }
 }
