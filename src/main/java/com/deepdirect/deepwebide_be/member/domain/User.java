@@ -42,15 +42,18 @@ public class User {
     private String profileImageUrl;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean emailVerified = false;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "owner")
+    @Builder.Default
     private List<Repository> repositories = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<RepositoryFavorite> favorites = new ArrayList<>();
 
 

@@ -1,10 +1,14 @@
 package com.deepdirect.deepwebide_be.member.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
+import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
+import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
+import com.deepdirect.deepwebide_be.member.repository.PhoneVerificationRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -42,6 +46,7 @@ public class UserService {
     private final ProfileImageService profileImageService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
+    private final PhoneVerificationService phoneVerificationService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -169,6 +174,21 @@ public class UserService {
                 "Set-Cookie",
                 "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
         );
+    }
+
+    public String findEmail(FindEmailRequest request) {
+        // 인증코드 검증
+        phoneVerificationService.verifyCode(
+                request.getPhoneNumber(),
+                request.getCode()
+        );
+
+        User user = userRepository.findByUsernameAndPhoneNumber(
+                request.getUsername(), request.getPhoneNumber()
+            ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+
+        return user.getEmail();
     }
 
     public boolean isEmailAlreadyExist(String email) {
