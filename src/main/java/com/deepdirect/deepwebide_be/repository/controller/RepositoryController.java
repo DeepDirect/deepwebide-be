@@ -133,4 +133,13 @@ public class RepositoryController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "멤버가 성공적으로 추방되었습니다.", response));
     }
 
+    @GetMapping("/{repositoryId}/settings")
+    @Operation(summary = "레포지토리 환경설정 정보 조회")
+    public ResponseEntity<ApiResponseDto<RepositorySettingResponse>> getRepositorySettings(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        RepositorySettingResponse response = repositoryService.getRepositorySettings(repositoryId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 환경설정 페이지 조회에 성공했습니다.", response));
+    }
 }
