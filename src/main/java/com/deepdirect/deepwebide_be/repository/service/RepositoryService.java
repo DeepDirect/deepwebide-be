@@ -208,7 +208,10 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.NOT_OWNER);
         }
 
+        if (repo.isShared()) {
+            throw new GlobalException(ErrorCode.CANNOT_DELETE_SHARED_REPOSITORY);
+        }
+
         repo.softDelete();
-        repositoryRepository.save(repo);
     }
 }
