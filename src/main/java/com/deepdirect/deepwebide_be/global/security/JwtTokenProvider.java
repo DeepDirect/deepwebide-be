@@ -21,6 +21,9 @@ public class JwtTokenProvider {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpireMillis;
 
+    @Value("300000") // 5분
+    private long reauthTokenExpireMillis;
+
     private Key secretKey;
 
     @PostConstruct
@@ -53,6 +56,17 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createReauthenticateToken(String username, String email, String phoneNumber) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + reauthTokenExpireMillis);
+        return Jwts.builder()
+                .setSubject(String.valueOf(username + email + phoneNumber))
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     // JWT 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
@@ -75,4 +89,6 @@ public class JwtTokenProvider {
     public long getRefreshTokenExpireMillis() {
         return refreshTokenExpireMillis;
     }
+
+
 }
