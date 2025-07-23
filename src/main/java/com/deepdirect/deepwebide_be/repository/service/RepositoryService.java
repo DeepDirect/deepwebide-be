@@ -7,6 +7,7 @@ import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
@@ -218,11 +219,11 @@ public class RepositoryService {
         Repository repo = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(userId, repositoryId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(userId, repositoryId);
+        member.softDelete(); // 💡 논리 삭제 수행
 
         if (repo.isShared()) {
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresent(entry -> {
@@ -247,12 +248,11 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.CANNOT_KICK_SELF);
         }
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(memberId, repositoryId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, memberId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(memberId, repositoryId);
-
+        member.softDelete();
 
         RepositoryEntryCode entryCode = entryCodeRepository.findByRepositoryId(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.ENTRY_CODE_NOT_FOUND));

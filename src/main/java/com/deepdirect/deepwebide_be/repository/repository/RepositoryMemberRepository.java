@@ -4,11 +4,12 @@ package com.deepdirect.deepwebide_be.repository.repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface RepositoryMemberRepository extends JpaRepository<RepositoryMember, Long> {
 
-    boolean existsByRepositoryIdAndUserId(Long repositoryId, Long userId);
-    boolean existsByUserIdAndRepositoryId(Long userId, Long repositoryId);
-
+    boolean existsByRepositoryIdAndUserIdAndDeletedAtIsNull(Long repositoryId, Long userId);
     long countByRepositoryIdAndDeletedAtIsNull(Long repositoryId);
-    void deleteByUserIdAndRepositoryId(Long userId, Long repositoryId);
+    Optional<RepositoryMember> findByRepositoryIdAndUserIdAndDeletedAtIsNull(Long repositoryId, Long userId);
+    Optional<RepositoryMember> findByRepositoryIdAndUserIdAndDeletedAtIsNotNull(Long repositoryId, Long userId);
 }
