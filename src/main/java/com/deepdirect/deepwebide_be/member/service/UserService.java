@@ -1,18 +1,15 @@
 package com.deepdirect.deepwebide_be.member.service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
+import com.deepdirect.deepwebide_be.member.domain.AuthType;
 import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
 import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
 import com.deepdirect.deepwebide_be.member.repository.PhoneVerificationRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PhoneVerificationRepository verificationRepository;
     private static final String PASSWORD_PATTERN = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%]).{8,}$";
     private static final Pattern PASSWORD_REGEX = Pattern.compile(PASSWORD_PATTERN);
     private static final String NAME_PATTERN = "^[가-힣]{2,20}$";
@@ -46,7 +44,6 @@ public class UserService {
     private final ProfileImageService profileImageService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
-    private final PhoneVerificationService phoneVerificationService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -177,11 +174,20 @@ public class UserService {
     }
 
     public String findEmail(FindEmailRequest request) {
-        // 인증코드 검증
-        phoneVerificationService.verifyCode(
-                request.getPhoneNumber(),
-                request.getPhoneCode()
-        );
+
+        AuthType authType = AuthType.FIND_ID;
+
+        PhoneVerification verification = verificationRepository
+                .findByPhoneNumberAndPhoneCodeAndAuthType(
+                        request.getPhoneNumber(),
+                        request.getPhoneCode(),
+                        authType
+                )
+                .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
+
+        if (!verification.isVerified()) {
+            throw new GlobalException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
 
         User user = userRepository.findByUsernameAndPhoneNumber(
                 request.getUsername(), request.getPhoneNumber()
