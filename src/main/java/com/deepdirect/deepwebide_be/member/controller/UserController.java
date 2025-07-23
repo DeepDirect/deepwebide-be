@@ -1,14 +1,8 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
-import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.EmailCheckRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
-import com.deepdirect.deepwebide_be.member.dto.response.FindEmailResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.EmailCheckResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
+import com.deepdirect.deepwebide_be.member.dto.request.*;
+import com.deepdirect.deepwebide_be.member.dto.response.*;
 import com.deepdirect.deepwebide_be.member.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -73,5 +67,21 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(
                 200, "사용 가능한 이메일입니다.", emailCheckResponse
         ));
+    }
+
+    @PostMapping("/password/verify-user")
+    public ResponseEntity<ApiResponseDto<PasswordVerifyUserResponse>> verifyUser(@Valid @RequestBody PasswordVerifyUserRequest request) {
+        String reauthToken = userService.passwordVerifyUser(request);
+        PasswordVerifyUserResponse response = new PasswordVerifyUserResponse(reauthToken);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "본인 인증에 성공했습니다.", response));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponseDto<Void>> resetPassword(
+            @Valid @RequestBody PasswordResetRequest request,
+            @RequestHeader("Authorization") String authorizationHeader
+    ) {
+        userService.verifyAndResetPassword(request, authorizationHeader);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "비밀번호가 재설정되었습니다.", null));
     }
 }
