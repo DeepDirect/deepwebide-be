@@ -102,4 +102,17 @@ public class RepositoryController {
 
         return ResponseEntity.ok(ApiResponseDto.of(200,message, response));
     }
+
+    @DeleteMapping("/{repositoryId}")
+    public ResponseEntity<ApiResponseDto<Void>> deleteRepository(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails.getId();
+
+        repositoryService.deleteRepository(repositoryId, userId);
+
+        return ResponseEntity.ok(ApiResponseDto.of(200,"레포지토리가 삭제되었습니다.",null));
+    }
+
 }

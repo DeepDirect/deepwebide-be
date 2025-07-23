@@ -50,6 +50,7 @@ public enum ErrorCode {
     REPOSITORY_NAME_TOO_LONG(HttpStatus.BAD_REQUEST, "레포지토리 이름은 50자 이하여야 합니다."), // 레포지토리 이름 길이 제한
     NOT_OWNER_TO_SHARE(HttpStatus.BAD_REQUEST, "오너만 공유를 할 수 있습니다."),
     NOT_OWNER_TO_UNSHARE(HttpStatus.BAD_REQUEST, "오너만 공유를 취소할 수 있습니다."),
+    CANNOT_DELETE_SHARED_REPOSITORY(HttpStatus.BAD_REQUEST, "공유 중인 레포지토리는 삭제할 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),

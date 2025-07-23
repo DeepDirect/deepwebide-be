@@ -199,5 +199,19 @@ public class RepositoryService {
 
         return RepositoryResponse.from(repo);
     }
+    @Transactional
+    public void deleteRepository(Long repositoryId, Long userId) {
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
+        if (!repo.getOwner().getId().equals(userId)) {
+            throw new GlobalException(ErrorCode.NOT_OWNER);
+        }
+
+        if (repo.isShared()) {
+            throw new GlobalException(ErrorCode.CANNOT_DELETE_SHARED_REPOSITORY);
+        }
+
+        repo.softDelete();
+    }
 }
