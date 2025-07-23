@@ -40,6 +40,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final ProfileImageService profileImageService;
+    private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
 
     private String generateUniqueNickname(String baseNickname) {
@@ -88,6 +89,10 @@ public class UserService {
 
         String profileImageUrl = profileImageService.generateProfileImageUrl(nickname, 48);
 
+        // 이메일 인증
+        String code = emailVerificationService.createVerification(request.getEmail());
+        emailVerificationService.sendVerificationEmail(request.getEmail(), code);
+
         User user = userRepository.save(User.builder()
                 .username(request.getUsername())
                 .nickname(nickname)
@@ -95,7 +100,7 @@ public class UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .password(encodedPassword)
                 .profileImageUrl(profileImageUrl)
-                .emailVerified(true) // TODO: 이메일 인증 추가
+                .emailVerified(false)
                 .build());
 
         return SignUpResponse.builder()
