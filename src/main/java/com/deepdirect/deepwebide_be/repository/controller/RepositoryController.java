@@ -115,4 +115,14 @@ public class RepositoryController {
         return ResponseEntity.ok(ApiResponseDto.of(200,"레포지토리가 삭제되었습니다.",null));
     }
 
+    @PostMapping("/{repositoryId}/exit")
+    @Operation(summary = "공유 레포지토리 나가기", description = "사용자가 공유받은 레포지토리에서 퇴장합니다.")
+    public ResponseEntity<ApiResponseDto<Void>> exitSharedRepository(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        repositoryService.exitSharedRepository(repositoryId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "공유 레포지토리에서 퇴장했습니다.", null));
+    }
+
 }

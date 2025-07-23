@@ -15,6 +15,7 @@ import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResp
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
+import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class RepositoryService {
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
     private final RepositoryEntryCodeRepository entryCodeRepository;
+    private final RepositoryMemberRepository repositoryMemberRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -213,5 +215,26 @@ public class RepositoryService {
         }
 
         repo.softDelete();
+    }
+
+    @Transactional
+    public void exitSharedRepository(Long repositoryId, Long userId) {
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(userId, repositoryId)) {
+            throw new GlobalException(ErrorCode.NOT_MEMBER);
+        }
+
+        repositoryMemberRepository.deleteByUserIdAndRepositoryId(userId, repositoryId);
+
+        if (repo.isShared()) {
+            entryCodeRepository.findByRepositoryId(repositoryId).ifPresent(entry -> {
+                entry.updateEntryCode(
+                        EntryCodeGenerator.generateUniqueCode(entryCodeRepository::existsByEntryCode),
+                        LocalDateTime.now().plusDays(3)
+                );
+            });
+        }
     }
 }

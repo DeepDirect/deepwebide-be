@@ -51,7 +51,7 @@ public enum ErrorCode {
     NOT_OWNER_TO_SHARE(HttpStatus.BAD_REQUEST, "오너만 공유를 할 수 있습니다."),
     NOT_OWNER_TO_UNSHARE(HttpStatus.BAD_REQUEST, "오너만 공유를 취소할 수 있습니다."),
     CANNOT_DELETE_SHARED_REPOSITORY(HttpStatus.BAD_REQUEST, "공유 중인 레포지토리는 삭제할 수 없습니다."),
-
+    NOT_MEMBER(HttpStatus.BAD_REQUEST,"레포지토리 멤버가 아닙니다."),
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
     WRONG_PASSWORD(HttpStatus.UNAUTHORIZED, "아이디 혹은 비밀번호가 일치하지 않습니다."),
