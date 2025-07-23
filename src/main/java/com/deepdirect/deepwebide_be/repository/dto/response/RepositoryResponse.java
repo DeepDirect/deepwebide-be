@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class SharedRepositoryResponse {
+public class RepositoryResponse {
 
     private Long repositoryId;
     private String repositoryName;
@@ -20,8 +20,8 @@ public class SharedRepositoryResponse {
     private LocalDateTime updatedAt;
     private boolean isFavorite;
 
-    public static SharedRepositoryResponse from(Repository repo) {
-        return SharedRepositoryResponse.builder()
+    public static RepositoryResponse from(Repository repo) {
+        return RepositoryResponse.builder()
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(repo.getOwner().getId())
