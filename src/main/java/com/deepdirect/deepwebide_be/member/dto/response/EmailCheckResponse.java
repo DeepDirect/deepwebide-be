@@ -11,5 +11,5 @@ import lombok.Setter;
 public class EmailCheckResponse {
 
     @Schema(description = "가입 가능 여부", example = "true")
-    private boolean isAvailable;
+    private boolean IsAvailable;
 }
