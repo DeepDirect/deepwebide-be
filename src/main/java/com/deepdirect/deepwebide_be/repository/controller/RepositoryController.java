@@ -5,10 +5,7 @@ import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
-import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
-import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
-import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResponse;
-import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.*;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -113,6 +110,27 @@ public class RepositoryController {
         repositoryService.deleteRepository(repositoryId, userId);
 
         return ResponseEntity.ok(ApiResponseDto.of(200,"레포지토리가 삭제되었습니다.",null));
+    }
+
+    @PostMapping("/{repositoryId}/exit")
+    @Operation(summary = "공유 레포지토리 나가기", description = "사용자가 공유받은 레포지토리에서 퇴장합니다.")
+    public ResponseEntity<ApiResponseDto<Void>> exitSharedRepository(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        repositoryService.exitSharedRepository(repositoryId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "공유 레포지토리에서 퇴장했습니다.", null));
+    }
+
+    @PostMapping("/{repositoryId}/kicked/{memberId}")
+    @Operation(summary = "멤버 추방", description = "오너가 특정 멤버를 추방합니다.")
+    public ResponseEntity<ApiResponseDto<KickedMemberResponse>> kickMember(
+            @PathVariable Long repositoryId,
+            @PathVariable Long memberId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        KickedMemberResponse response = repositoryService.kickMember(repositoryId, userDetails.getId(), memberId);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "멤버가 성공적으로 추방되었습니다.", response));
     }
 
 }
