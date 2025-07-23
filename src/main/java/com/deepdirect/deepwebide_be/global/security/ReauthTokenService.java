@@ -1,5 +1,6 @@
 package com.deepdirect.deepwebide_be.global.security;
 
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -29,8 +30,16 @@ public class ReauthTokenService {
         redisTemplate.delete(PREFIX + key);
     }
 
-    public boolean isValid(String key, String token) {
+    public boolean isValid(String key, String token, String username, String email, String phoneNumber, String phoneCode) {
         String stored = find(key);
-        return stored != null && stored.equals(token) && jwtTokenProvider.validateToken(token);
+        if (stored == null || !stored.equals(token)) return false;
+        if (!jwtTokenProvider.validateToken(token)) return false;
+
+        Claims claims = jwtTokenProvider.getClaims(token);
+
+        return username.equals(claims.get("username", String.class)) &&
+                email.equals(claims.get("email", String.class)) &&
+                phoneNumber.equals(claims.get("phoneNumber", String.class)) &&
+                phoneCode.equals(claims.get("phoneCode", String.class));
     }
 }
