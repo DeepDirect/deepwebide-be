@@ -7,6 +7,7 @@ import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -218,7 +220,7 @@ public class RepositoryService {
         Repository repo = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(userId, repositoryId)) {
+        if (!repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId)) {
             throw new GlobalException(ErrorCode.NOT_MEMBER);
         }
 
@@ -247,7 +249,7 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.CANNOT_KICK_SELF);
         }
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(memberId, repositoryId)) {
+        if (!repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, memberId)) {
             throw new GlobalException(ErrorCode.NOT_MEMBER);
         }
 
@@ -261,5 +263,46 @@ public class RepositoryService {
         entryCode.updateEntryCode(newCode, LocalDateTime.now().plusDays(3));
 
         return new KickedMemberResponse(memberId);
+    }
+
+    @Transactional(readOnly = true)
+    public RepositorySettingResponse getRepositorySettings(Long repositoryId, Long userId) {
+
+        Repository repository = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean isOwner = repository.getOwner().getId().equals(userId);
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
+
+        // 접근 권한 없으면 예외
+        if (!isOwner && !isMember && repository.isShared()) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
+
+        if (repository.isShared()) {
+            List<RepositoryMember> members = repositoryMemberRepository.findAllByRepositoryId(repositoryId);
+            for (RepositoryMember member : members) {
+                User user = member.getUser();
+
+                memberInfos.add(RepositorySettingResponse.MemberInfo.builder()
+                        .userId(user.getId())
+                        .nickname(user.getNickname())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .role(member.getRole().name()) // "OWNER" or "MEMBER"
+                        .build());
+            }
+        }
+
+        return RepositorySettingResponse.builder()
+                .repositoryId(repository.getId())
+                .repositoryName(repository.getRepositoryName())
+                .createdAt(repository.getCreatedAt())
+                .updatedAt(repository.getUpdatedAt())
+                .isShared(repository.isShared())
+                .shareLink(repository.getShareLink())
+                .members(memberInfos)
+                .build();
     }
 }
