@@ -8,7 +8,9 @@ import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
+import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
@@ -120,4 +122,34 @@ public class RepositoryService {
                 .repositories(sharedRepositoryDtos)
                 .build();
     }
+    @Transactional
+    public RepositoryRenameResponse renameRepository(Long repoId, Long userId, RepositoryRenameRequest req) {
+        Repository repo = repositoryRepository.findById(repoId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.getOwner().getId().equals(userId)) {
+            throw new GlobalException(ErrorCode.NOT_OWNER);
+        }
+
+        String newName = req.getRepositoryName();
+        if (newName.length() > 50) {
+            throw new GlobalException(ErrorCode.REPOSITORY_NAME_TOO_LONG);
+        }
+        if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(newName, userId)) {
+            throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
+        }
+
+        repo.setRepositoryName(newName);
+        repositoryRepository.save(repo);
+
+        return RepositoryRenameResponse.builder()
+                .repositoryId(repo.getId())
+                .repositoryName(repo.getRepositoryName())
+                .ownerId(userId)
+                .ownerName(repo.getOwner().getUsername())
+                .createdAt(repo.getCreatedAt())
+                .updatedAt(repo.getUpdatedAt())
+                .build();
+    }
+
 }
