@@ -1,8 +1,10 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
+import com.deepdirect.deepwebide_be.member.dto.response.FindEmailResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
 import com.deepdirect.deepwebide_be.member.service.UserService;
@@ -51,5 +53,11 @@ public class UserController {
     ) {
         userService.signOut(authorizationHeader, response);
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
+    }
+
+    @PostMapping("/email/find")
+    public ResponseEntity<ApiResponseDto<FindEmailResponse>> findEmail(@Valid @RequestBody FindEmailRequest request) {
+        FindEmailResponse response = new FindEmailResponse(userService.findEmail(request));
+        return ResponseEntity.ok(ApiResponseDto.of(200, "이메일(아이디)을 찾았습니다.", response));
     }
 }
