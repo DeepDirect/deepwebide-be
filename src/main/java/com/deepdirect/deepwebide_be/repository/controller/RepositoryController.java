@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameReque
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -86,5 +87,19 @@ public class RepositoryController {
     ) {
         RepositoryRenameResponse response = repositoryService.renameRepository(repositoryId, userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 이름이 변경 되었습니다.", response));
+    }
+
+    @PostMapping("/{repositoryId}")
+    public ResponseEntity<ApiResponseDto<RepositoryResponse>> toggleRepositoryShare(
+            @PathVariable Long repositoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        RepositoryResponse response = repositoryService.toggleShareStatus(repositoryId, userDetails.getId());
+
+        String message = response.isShared()
+                ? "공유 레포지토리로 전환되었습니다."
+                : "레포지토리 공유가 취소되었습니다.";
+
+        return ResponseEntity.ok(ApiResponseDto.of(200,message, response));
     }
 }
