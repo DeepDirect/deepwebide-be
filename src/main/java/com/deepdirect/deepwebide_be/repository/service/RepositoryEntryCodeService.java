@@ -54,6 +54,12 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.ALREADY_JOINED);
         }
 
+        long activeMemberCount = repositoryMemberRepository.countByRepositoryIdAndDeletedAtIsNull(repositoryId);
+        if (activeMemberCount >= 4) {
+            throw new GlobalException(ErrorCode.REPOSITORY_MEMBER_LIMIT_EXCEEDED);
+        }
+
+
         User user = userRepository.getReferenceById(userId);
 
 
