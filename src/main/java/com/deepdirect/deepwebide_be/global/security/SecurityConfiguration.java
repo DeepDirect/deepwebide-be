@@ -57,6 +57,7 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/api/auth/**"),
                                 new AntPathRequestMatcher("/h2-console/**")
                         ).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/auth/signout")).authenticated()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
