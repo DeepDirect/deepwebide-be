@@ -1,8 +1,10 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.member.dto.request.EmailCheckRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
 import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
+import com.deepdirect.deepwebide_be.member.dto.response.EmailCheckResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
 import com.deepdirect.deepwebide_be.member.service.UserService;
@@ -51,5 +53,17 @@ public class UserController {
     ) {
         userService.signOut(authorizationHeader, response);
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
+    }
+
+    @PostMapping("/email/check")
+    public ResponseEntity<ApiResponseDto<EmailCheckResponse>> checkEmail(
+            @Valid @RequestBody EmailCheckRequest emailCheckRequest) {
+        boolean isAvailable = userService.isEmailAlreadyExist(emailCheckRequest.getEmail());
+
+        EmailCheckResponse emailCheckResponse = new EmailCheckResponse(isAvailable);
+
+        return ResponseEntity.ok(ApiResponseDto.of(
+                200, "사용 가능한 이메일입니다.", emailCheckResponse
+        ));
     }
 }
