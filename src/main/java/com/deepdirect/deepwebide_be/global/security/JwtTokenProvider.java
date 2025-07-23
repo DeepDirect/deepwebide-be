@@ -56,11 +56,16 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createReauthenticateToken(String username, String email, String phoneNumber) {
+    public String createReauthenticateToken(String username, String email, String phoneNumber, String phoneCode) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + reauthTokenExpireMillis);
+
         return Jwts.builder()
-                .setSubject(String.valueOf(username + email + phoneNumber))
+                .setSubject("reauth") // 식별 목적 (옵션)
+                .claim("username", username)
+                .claim("email", email)
+                .claim("phoneNumber", phoneNumber)
+                .claim("phoneCode", phoneCode)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -90,5 +95,12 @@ public class JwtTokenProvider {
         return refreshTokenExpireMillis;
     }
 
-
+    // 클레임 추출
+    public Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }
