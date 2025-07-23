@@ -255,43 +255,54 @@ public class UserService {
 
     // 비밀번호 변경 검증
     @Transactional
-    public void verifyAndResetPassword(PasswordResetRequest request, String reauthToken) {
-        AuthType authType = AuthType.FIND_PASSWORD;
+    public void verifyAndResetPassword(PasswordResetRequest request, String authorizationHeader) {
+        final AuthType authType = AuthType.FIND_PASSWORD;
 
-        // 토큰 유효성 검증
+        // 1. Authorization 헤더 검증 및 토큰 추출
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String reauthToken = authorizationHeader.replace("Bearer ", "");
+
+        // 2. 토큰 유효성 검사
         if (!jwtTokenProvider.validateToken(reauthToken)) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 클레임 추출
+        // 3. 토큰에서 클레임 추출
         Claims claims = jwtTokenProvider.getClaims(reauthToken);
         String username = claims.get("username", String.class);
         String email = claims.get("email", String.class);
         String phoneNumber = claims.get("phoneNumber", String.class);
         String phoneCode = claims.get("phoneCode", String.class);
 
-        // 인증 여부 확인
-        PhoneVerification verification = getVerification(
-                authType, phoneNumber, phoneCode
-        );
+        // 4. Redis에 저장된 토큰인지 확인
+        if (!reauthTokenService.isValid(email, reauthToken, username, email, phoneNumber, phoneCode)) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
 
+        // 5. 인증 이력 확인
+        PhoneVerification verification = getVerification(authType, phoneNumber, phoneCode);
         if (!verification.isVerified()) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 사용자 확인
+        // 6. 사용자 검증
         User user = userRepository.findByEmailAndUsername(email, username)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
-
-        // 비밀번호와 비밀번호 확인 비교
+        // 7. 비밀번호 확인 일치 여부 확인
         if (!request.getNewPassword().equals(request.getPasswordCheck())) {
             throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
         }
 
-        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
-        user.updatePassword(encodedPassword);
-
+        // 8. 비밀번호 변경
+        user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // 9. 재인증 토큰 제거
+        reauthTokenService.delete(email);
     }
+
 }
