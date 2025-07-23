@@ -190,4 +190,12 @@ public class UserService {
 
         return user.getEmail();
     }
+
+    public boolean isEmailAlreadyExist(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new GlobalException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        return true;
+    }
 }
