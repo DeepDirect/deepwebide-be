@@ -49,7 +49,7 @@ public class PhoneVerificationController {
     public ResponseEntity<ApiResponseDto<PhoneVerifyCodeResponse>> verifyCode(
             @Valid @RequestBody PhoneVerifyCodeRequest  request) {
 
-        boolean verificationResult = phoneVerificationService.verifyCode(request.getPhoneNumber(), request.getCode());
+        boolean verificationResult = phoneVerificationService.verifyCode(request.getPhoneNumber(), request.getPhoneCode());
 
         PhoneVerifyCodeResponse verificationResponse = new PhoneVerifyCodeResponse(verificationResult);
 
