@@ -11,6 +11,7 @@ import java.util.List;
 @Entity
 @Table(name = "repositories")
 @Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
