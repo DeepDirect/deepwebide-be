@@ -6,6 +6,7 @@ import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
 import com.deepdirect.deepwebide_be.member.service.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,8 +34,22 @@ public class UserController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<ApiResponseDto<SignInResponse>> signIn(@Valid @RequestBody SignInRequest signInRequest) {
-        SignInResponse response = userService.signIn(signInRequest);
+    public ResponseEntity<ApiResponseDto<SignInResponse>> signIn(
+            @Valid @RequestBody SignInRequest signInRequest,
+            HttpServletResponse servletResponse
+    ) {
+        // 1. 서비스에서 로그인 + 토큰 2개 발급
+        SignInResponse response = userService.signIn(signInRequest, servletResponse);
+        // response(본문)는 AccessToken만, RefreshToken은 쿠키로 헤더에 내려감!
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그인에 성공했습니다.", response));
+    }
+
+    @PostMapping("/signout")
+    public ResponseEntity<ApiResponseDto<Void>> signOut(
+            @RequestHeader("Authorization") String authorizationHeader,
+            HttpServletResponse response
+    ) {
+        userService.signOut(authorizationHeader, response);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 }

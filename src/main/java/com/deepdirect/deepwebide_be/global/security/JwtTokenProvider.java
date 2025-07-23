@@ -15,8 +15,11 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secretKeyPlain;
 
-    @Value("${jwt.expiration}")
-    private long expirationMillis;
+    @Value("${jwt.access-token-expiration}")
+    private long accessTokenExpireMillis;
+
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpireMillis;
 
     private Key secretKey;
 
@@ -25,15 +28,27 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(secretKeyPlain.getBytes());
     }
 
-    // JWT 토큰 생성
+    // Access Token 생성
     public String createToken(Long userId) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + expirationMillis);
+        Date expiration = new Date(now.getTime() + accessTokenExpireMillis);
 
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .setIssuedAt(now)
                 .setExpiration(expiration)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // Refresh Token 생성
+    public String createRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshTokenExpireMillis);
+        return Jwts.builder()
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(now)
+                .setExpiration(expiry)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -55,5 +70,9 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
         return Long.valueOf(claims.getSubject());
+    }
+
+    public long getRefreshTokenExpireMillis() {
+        return refreshTokenExpireMillis;
     }
 }

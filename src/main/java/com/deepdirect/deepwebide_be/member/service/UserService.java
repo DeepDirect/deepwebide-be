@@ -3,6 +3,12 @@ package com.deepdirect.deepwebide_be.member.service;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +41,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final ProfileImageService profileImageService;
     private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenService refreshTokenService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -105,7 +112,7 @@ public class UserService {
     }
 
     @Transactional
-    public SignInResponse signIn(SignInRequest request) {
+    public SignInResponse signIn(SignInRequest request, HttpServletResponse servletResponse) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
 
@@ -113,8 +120,54 @@ public class UserService {
             throw new GlobalException(ErrorCode.WRONG_PASSWORD);
         }
 
+        // 1. 토큰 발급 (AccessToken, RefreshToken)
         String accessToken = jwtTokenProvider.createToken(user.getId());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
+        // 2. 리프레시 토큰 Redis에 저장 (userId -> refreshToken)
+        refreshTokenService.save(user.getId(), refreshToken);
+
+        // 3. 리프레시 토큰을 쿠키로 내려주기
+        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(60 * 60 * 24 * 14); // 2주
+        refreshCookie.setSecure(false); // 실제 배포시 true(https) 권장!
+        servletResponse.addCookie(refreshCookie);
+
+        // 4. 액세스 토큰만 응답 본문으로 전달
         return new SignInResponse(accessToken, new SignInUserDto(user));
+    }
+
+    @Transactional
+    public void signOut(String authorizationHeader, HttpServletResponse response) {
+        // 1. accessToken 추출 및 검증
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        if (!jwtTokenProvider.validateToken(accessToken)) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 2. userId 추출
+        Long userId = jwtTokenProvider.getUserIdFromToken(accessToken);
+
+        // 3. Redis에서 refreshToken 삭제
+        refreshTokenService.delete(userId);
+
+        // 4. 쿠키 만료 (refreshToken)
+        Cookie cookie = new Cookie("refreshToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // 운영환경에서만 true, 개발은 false도 가능
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
+        // SameSite=Strict 명시적 추가
+        response.setHeader(
+                "Set-Cookie",
+                "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+        );
     }
 }
