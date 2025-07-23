@@ -11,7 +11,6 @@ import java.util.List;
 @Entity
 @Table(name = "repositories")
 @Getter
-@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -72,6 +71,16 @@ public class Repository {
 
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void updateRepositoryName(String newName) {
+        this.repositoryName = newName;
+    }
+    public void updateSharedStatus(boolean newShared) {
+        this.isShared = newShared;
+    }
+    public void setShareLink(String link) {
+        this.shareLink = link;
     }
 
 }
