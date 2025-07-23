@@ -180,7 +180,7 @@ public class UserService {
         // 인증코드 검증
         phoneVerificationService.verifyCode(
                 request.getPhoneNumber(),
-                request.getCode()
+                request.getPhoneCode()
         );
 
         User user = userRepository.findByUsernameAndPhoneNumber(
