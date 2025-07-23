@@ -170,4 +170,12 @@ public class UserService {
                 "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
         );
     }
+
+    public boolean isEmailAlreadyExist(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new GlobalException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        return true;
+    }
 }
