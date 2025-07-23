@@ -80,12 +80,12 @@ public class PhoneVerificationService {
                         .phoneNumber(phoneNumber)
                         .authType(reqAuthType)
                         .phoneCode(code)
-                        .expiresAt(LocalDateTime.now().plusMinutes(3))
+                        .expiresAt(LocalDateTime.now().plusMinutes(1))
                         .verified(false)
                         .build()
         );
 
-        return 180;
+        return 60;
     }
 
     // 사용자 검증
