@@ -7,6 +7,7 @@ import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import com.deepdirect.deepwebide_be.member.domain.AuthType;
 import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
 import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
+import com.deepdirect.deepwebide_be.member.dto.request.PasswordVerifyUserRequest;
 import com.deepdirect.deepwebide_be.member.repository.PhoneVerificationRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -193,6 +194,7 @@ public class UserService {
                 request.getUsername(), request.getPhoneNumber()
             ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
+        verification.verify();
 
         return user.getEmail();
     }
