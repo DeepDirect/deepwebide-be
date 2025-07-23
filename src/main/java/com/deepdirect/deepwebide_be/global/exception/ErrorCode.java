@@ -26,6 +26,10 @@ public enum ErrorCode {
     REPOSITORY_NAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST,"이미 동일한 이름의 레포지토리가 존재합니다."),
     REPOSITORY_NOT_SHARED(HttpStatus.BAD_REQUEST, "공유된 레포지토리가 아닙니다."),
     ENTRY_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "입장 코드가 만료되었습니다."),
+    INVALID_ENTRY_CODE(HttpStatus.BAD_REQUEST, "올바른 입장 코드가 아닙니다."),
+    ALREADY_JOINED(HttpStatus.BAD_REQUEST, "이미 참여한 레포지토리입니다."),
+    REPOSITORY_MEMBER_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "최대 인원이 초과되어 입장할 수 없습니다."),
+
 
 
 

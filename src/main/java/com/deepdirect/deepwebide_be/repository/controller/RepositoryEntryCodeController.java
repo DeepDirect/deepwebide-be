@@ -2,9 +2,12 @@ package com.deepdirect.deepwebide_be.repository.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
+import com.deepdirect.deepwebide_be.repository.dto.request.EntryCodeVerifyRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryJoinResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryEntryCodeService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,6 +45,24 @@ public class RepositoryEntryCodeController {
 
         return ResponseEntity.ok(
                 ApiResponseDto.of(200, "입장코드가 재발급 되셨습니다.", data)
+        );
+    }
+
+    @PostMapping("/{repositoryId}/entryCode")
+    @Operation(summary = "입장 코드 검증 및 레포 참여", description = "공유된 레포지토리에 입장 코드를 통해 사용자를 참여자로 등록합니다.")
+    public ResponseEntity<ApiResponseDto<RepositoryJoinResponse>> verifyEntryCodeAndJoin(
+            @PathVariable Long repositoryId,
+            @RequestBody @Valid EntryCodeVerifyRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        RepositoryJoinResponse response = entryCodeService.verifyEntryCodeAndJoin(
+                repositoryId,
+                request.getEntryCode(),
+                userDetails.getId()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponseDto.of(200, "공유 레포지토리에 참여되었습니다.", response)
         );
     }
 
