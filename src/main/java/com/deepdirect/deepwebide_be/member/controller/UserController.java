@@ -4,6 +4,8 @@ import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.member.dto.request.*;
 import com.deepdirect.deepwebide_be.member.dto.response.*;
 import com.deepdirect.deepwebide_be.member.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +78,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "본인 인증에 성공했습니다.", response));
     }
 
+    @Operation(summary = "비밀번호 재설정", security = @SecurityRequirement(name = "Authorization"))
     @PostMapping("/password/reset")
     public ResponseEntity<ApiResponseDto<Void>> resetPassword(
             @Valid @RequestBody PasswordResetRequest request,
