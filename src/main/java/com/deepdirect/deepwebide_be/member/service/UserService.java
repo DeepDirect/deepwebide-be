@@ -174,17 +174,26 @@ public class UserService {
         );
     }
 
+    // 타입 + 휴대폰번호 + 인증코드로 조회된 정보
+    public PhoneVerification getVerification(AuthType authType, String phoneNumber, String phoneCode) {
+
+        return verificationRepository
+                .findByPhoneNumberAndPhoneCodeAndAuthType(
+                        phoneNumber,
+                        phoneCode,
+                        authType
+                )
+                .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
+    }
+
+    @Transactional
     public String findEmail(FindEmailRequest request) {
 
         AuthType authType = AuthType.FIND_ID;
 
-        PhoneVerification verification = verificationRepository
-                .findByPhoneNumberAndPhoneCodeAndAuthType(
-                        request.getPhoneNumber(),
-                        request.getPhoneCode(),
-                        authType
-                )
-                .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
+        PhoneVerification verification = getVerification(
+                authType, request.getPhoneNumber(), request.getPhoneCode()
+        );
 
         if (!verification.isVerified()) {
             throw new GlobalException(ErrorCode.VERIFICATION_CODE_EXPIRED);
@@ -205,5 +214,35 @@ public class UserService {
         }
 
         return true;
+    }
+
+    @Transactional
+    public void passwordVerifyUser(PasswordVerifyUserRequest request) {
+
+        // 인증코드 검증
+        AuthType authType = AuthType.FIND_PASSWORD;
+
+        PhoneVerification verification = getVerification(
+                authType, request.getPhoneNumber(), request.getPhoneCode()
+        );
+
+        if (!verification.isVerified()) {
+            throw new GlobalException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
+
+        // 사용자 검증
+        User user = userRepository.findByUsernameAndPhoneNumber(
+                request.getUsername(), request.getPhoneNumber()
+        ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+        // 인증확인 여부 변경
+        verification.verify();
+
+        // reauth token 발급
+        String reauthToken = jwtTokenProvider.createReauthenticateToken(
+                request.getUsername(), request.getEmail(), request.getPhoneNumber()
+        );
+
+
     }
 }
