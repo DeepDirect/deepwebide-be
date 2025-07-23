@@ -8,8 +8,10 @@ import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryAccessCheckResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryJoinResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositorySummary;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
@@ -31,6 +33,36 @@ public class RepositoryEntryCodeService {
     private final RepositoryEntryCodeRepository entryCodeRepository;
     private final RepositoryMemberRepository repositoryMemberRepository;
     private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public RepositoryAccessCheckResponse checkAccess(Long repositoryId, Long userId) {
+        Repository repository = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
+        if (!repository.isShared() || !isMember) {
+            return RepositoryAccessCheckResponse.builder()
+                    .access(false)
+                    .build();
+        }
+
+        RepositorySummary summary = RepositorySummary.builder()
+                .repositoryId(repository.getId())
+                .repositoryName(repository.getRepositoryName())
+                .ownerId(repository.getOwner().getId())
+                .ownerName(repository.getOwner().getNickname())
+                .isShared(repository.isShared())
+                .shareLink(repository.getShareLink())
+                .createdAt(repository.getCreatedAt())
+                .updatedAt(repository.getUpdatedAt())
+                .build();
+
+        return RepositoryAccessCheckResponse.builder()
+                .access(true)
+                .repository(summary)
+                .build();
+    }
+
 
     @Transactional
     public RepositoryJoinResponse verifyEntryCodeAndJoin(Long repositoryId, String entryCode, Long userId) {
