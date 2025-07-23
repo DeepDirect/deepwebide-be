@@ -49,7 +49,12 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
     // AWS S3 (파일 업로드 및 다운로드를 위한 라이브러리)
+    // AWS SDK v2 - S3 + presigned URL
+    implementation platform('software.amazon.awssdk:bom:2.25.3')
+    implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:s3-presigner'
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.673'
+
 
     // 이메일 발송 기능
     implementation 'org.springframework.boot:spring-boot-starter-mail'
