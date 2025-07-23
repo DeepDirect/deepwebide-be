@@ -22,12 +22,14 @@ public class Repository {
     private Long id;
 
     @OneToMany(mappedBy = "repository", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<RepositoryMember> members = new ArrayList<>();
 
     @OneToOne(mappedBy = "repository", cascade = CascadeType.ALL, orphanRemoval = true)
     private RepositoryEntryCode entryCode;
 
     @OneToMany(mappedBy = "repository", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<RepositoryFavorite> favorites = new ArrayList<>();
 
     @Column(name="repository_name", length = 100, nullable = false)
