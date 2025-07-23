@@ -22,5 +22,5 @@ public class FindEmailRequest {
     @NotBlank(message = "인증코드 입력이 누락되었습니다.")
     @Pattern(regexp = "^\\d{6}$", message = "인증번호는 숫자 6자리여야 합니다.")
     @Schema(description = "인증코드", example = "012345")
-    private String code;
+    private String phoneCode;
 }
