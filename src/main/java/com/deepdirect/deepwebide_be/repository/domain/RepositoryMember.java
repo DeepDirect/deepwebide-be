@@ -44,4 +44,7 @@ public class RepositoryMember {
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
     }
+    public void restore() {
+        this.deletedAt = null;
+    }
 }

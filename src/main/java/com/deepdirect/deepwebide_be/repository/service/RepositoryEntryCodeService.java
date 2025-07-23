@@ -39,8 +39,10 @@ public class RepositoryEntryCodeService {
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
-        if (!repository.isShared() || !isMember) {
+        Optional<RepositoryMember> optionalMember =
+                repositoryMemberRepository.findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
+
+        if (!repository.isShared() || optionalMember.isEmpty()) {
             return RepositoryAccessCheckResponse.builder()
                     .access(false)
                     .build();
@@ -81,8 +83,9 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.INVALID_ENTRY_CODE);
         }
 
-        boolean alreadyJoined = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
-        if (alreadyJoined) {
+        // 중복 참여 방지
+        boolean alreadyActiveMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
+        if (alreadyActiveMember) {
             throw new GlobalException(ErrorCode.ALREADY_JOINED);
         }
 
@@ -91,17 +94,23 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.REPOSITORY_MEMBER_LIMIT_EXCEEDED);
         }
 
-
         User user = userRepository.getReferenceById(userId);
 
+        // 기존에 soft delete 된 참여자 존재 시 복구
+        Optional<RepositoryMember> deletedMemberOpt = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNotNull(repositoryId, userId);
 
-        // 참여자 등록
-        RepositoryMember member = RepositoryMember.builder()
-                .repository(repo)
-                .user(user)
-                .role(RepositoryMemberRole.MEMBER)
-                .build();
-        repositoryMemberRepository.save(member);
+        if (deletedMemberOpt.isPresent()) {
+            RepositoryMember deletedMember = deletedMemberOpt.get();
+            deletedMember.restore(); // 💡 새로운 메서드 추가 필요: this.deletedAt = null;
+        } else {
+            RepositoryMember member = RepositoryMember.builder()
+                    .repository(repo)
+                    .user(user)
+                    .role(RepositoryMemberRole.MEMBER)
+                    .build();
+            repositoryMemberRepository.save(member);
+        }
 
         return RepositoryJoinResponse.builder()
                 .repositoryId(repo.getId())

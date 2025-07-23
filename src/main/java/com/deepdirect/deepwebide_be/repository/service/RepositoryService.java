@@ -220,11 +220,12 @@ public class RepositoryService {
         Repository repo = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        if (!repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(userId, repositoryId);
+
+        member.softDelete(); // 💡 논리 삭제 수행
 
         if (repo.isShared()) {
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresent(entry -> {
@@ -249,12 +250,11 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.CANNOT_KICK_SELF);
         }
 
-        if (!repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, memberId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, memberId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(memberId, repositoryId);
-
+        member.softDelete();
 
         RepositoryEntryCode entryCode = entryCodeRepository.findByRepositoryId(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.ENTRY_CODE_NOT_FOUND));

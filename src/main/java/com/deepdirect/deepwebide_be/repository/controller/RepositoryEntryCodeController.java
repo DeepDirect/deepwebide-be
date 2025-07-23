@@ -24,7 +24,7 @@ public class RepositoryEntryCodeController {
 
     private final RepositoryEntryCodeService entryCodeService;
 
-    @GetMapping("/api/repositories/{repositoryId}")
+    @GetMapping("/{repositoryId}")
     @Operation(summary = "레포지토리 입장 권한 확인", description = "레포지토리에 접근 가능한지 확인합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryAccessCheckResponse>> checkAccessToRepository(
             @PathVariable Long repositoryId,
