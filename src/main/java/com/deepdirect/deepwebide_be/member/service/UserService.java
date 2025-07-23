@@ -1,18 +1,17 @@
 package com.deepdirect.deepwebide_be.member.service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.global.security.ReauthTokenService;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
+import com.deepdirect.deepwebide_be.member.domain.AuthType;
 import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
-import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
+import com.deepdirect.deepwebide_be.member.dto.request.*;
 import com.deepdirect.deepwebide_be.member.repository.PhoneVerificationRepository;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +20,6 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.member.domain.User;
-import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInUserDto;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
@@ -36,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PhoneVerificationRepository verificationRepository;
     private static final String PASSWORD_PATTERN = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%]).{8,}$";
     private static final Pattern PASSWORD_REGEX = Pattern.compile(PASSWORD_PATTERN);
     private static final String NAME_PATTERN = "^[가-힣]{2,20}$";
@@ -46,7 +44,7 @@ public class UserService {
     private final ProfileImageService profileImageService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
-    private final PhoneVerificationService phoneVerificationService;
+    private final ReauthTokenService reauthTokenService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -176,17 +174,37 @@ public class UserService {
         );
     }
 
+    // 타입 + 휴대폰번호 + 인증코드로 조회된 정보
+    public PhoneVerification getVerification(AuthType authType, String phoneNumber, String phoneCode) {
+
+        return verificationRepository
+                .findByPhoneNumberAndPhoneCodeAndAuthType(
+                        phoneNumber,
+                        phoneCode,
+                        authType
+                )
+                .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
+    }
+
+    @Transactional
     public String findEmail(FindEmailRequest request) {
-        // 인증코드 검증
-        phoneVerificationService.verifyCode(
-                request.getPhoneNumber(),
-                request.getCode()
+
+        AuthType authType = AuthType.FIND_ID;
+
+        PhoneVerification verification = getVerification(
+                authType, request.getPhoneNumber(), request.getPhoneCode()
         );
+
+        // 이미 인증되었는지 확인
+        if (verification.isVerified()) {
+            throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
+        }
 
         User user = userRepository.findByUsernameAndPhoneNumber(
                 request.getUsername(), request.getPhoneNumber()
             ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
+        verification.verify();
 
         return user.getEmail();
     }
@@ -198,4 +216,93 @@ public class UserService {
 
         return true;
     }
+
+    @Transactional
+    public String passwordVerifyUser(PasswordVerifyUserRequest request) {
+
+        // 인증코드 검증
+        AuthType authType = AuthType.FIND_PASSWORD;
+
+        PhoneVerification verification = getVerification(
+                authType, request.getPhoneNumber(), request.getPhoneCode()
+        );
+
+        if (verification.isVerified()) {
+            throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
+        }
+
+        // 사용자 검증
+        userRepository.findByUsernameAndPhoneNumber(
+                request.getUsername(), request.getPhoneNumber()
+        ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+        // 인증확인 여부 변경
+        verification.verify();
+
+        // reauth token 발급
+        String reauthToken = jwtTokenProvider.createReauthenticateToken(
+                request.getUsername(),
+                request.getEmail(),
+                request.getPhoneNumber(),
+                request.getPhoneCode()
+        );
+
+        // 토큰 저장
+        reauthTokenService.save(request.getEmail(), reauthToken);
+
+        return reauthToken;
+    }
+
+    // 비밀번호 변경 검증
+    @Transactional
+    public void verifyAndResetPassword(PasswordResetRequest request, String authorizationHeader) {
+        final AuthType authType = AuthType.FIND_PASSWORD;
+
+        // 1. Authorization 헤더 검증 및 토큰 추출
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String reauthToken = authorizationHeader.replace("Bearer ", "");
+
+        // 2. 토큰 유효성 검사
+        if (!jwtTokenProvider.validateToken(reauthToken)) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 3. 토큰에서 클레임 추출
+        Claims claims = jwtTokenProvider.getClaims(reauthToken);
+        String username = claims.get("username", String.class);
+        String email = claims.get("email", String.class);
+        String phoneNumber = claims.get("phoneNumber", String.class);
+        String phoneCode = claims.get("phoneCode", String.class);
+
+        // 4. Redis에 저장된 토큰인지 확인
+        if (!reauthTokenService.isValid(email, reauthToken, username, email, phoneNumber, phoneCode)) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 5. 인증 이력 확인
+        PhoneVerification verification = getVerification(authType, phoneNumber, phoneCode);
+        if (!verification.isVerified()) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 6. 사용자 검증
+        User user = userRepository.findByEmailAndUsername(email, username)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+        // 7. 비밀번호 확인 일치 여부 확인
+        if (!request.getNewPassword().equals(request.getPasswordCheck())) {
+            throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
+        }
+
+        // 8. 비밀번호 변경
+        user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // 9. 재인증 토큰 제거
+        reauthTokenService.delete(email);
+    }
+
 }

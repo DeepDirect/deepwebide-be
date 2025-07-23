@@ -27,6 +27,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
             throws ServletException, IOException {
         String token = resolveToken(request);
+
+        String uri = request.getRequestURI();
+        if (uri.equals("/api/auth/password/reset")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         if (token != null && jwtTokenProvider.validateToken(token)) {
             Long userId = jwtTokenProvider.getUserIdFromToken(token);
             // userId(Long)을 문자열로 변환해서 loadUserByUsername 사용
