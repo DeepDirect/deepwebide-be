@@ -73,4 +73,14 @@ public class Repository {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public void updateRepositoryName(String newName) {
+        this.repositoryName = newName;
+    }
+    public void updateSharedStatus(boolean newShared) {
+        this.isShared = newShared;
+    }
+    public void setShareLink(String link) {
+        this.shareLink = link;
+    }
+
 }

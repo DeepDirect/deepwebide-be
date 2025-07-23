@@ -143,7 +143,7 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
         }
 
-        repo.setRepositoryName(newName);
+        repo.updateRepositoryName(newName);
         repositoryRepository.save(repo);
 
         return RepositoryRenameResponse.builder()
@@ -169,7 +169,7 @@ public class RepositoryService {
         }
 
         boolean willShare = !repo.isShared();
-        repo.setShared(willShare);
+        repo.updateSharedStatus(willShare);
 
         if (willShare) {
             repo.setShareLink("https://webide.app/repositories" + repositoryId);
