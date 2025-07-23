@@ -7,9 +7,9 @@ import com.deepdirect.deepwebide_be.global.security.ReauthTokenService;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import com.deepdirect.deepwebide_be.member.domain.AuthType;
 import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
-import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.PasswordVerifyUserRequest;
+import com.deepdirect.deepwebide_be.member.dto.request.*;
 import com.deepdirect.deepwebide_be.member.repository.PhoneVerificationRepository;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,8 +20,6 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.member.domain.User;
-import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInUserDto;
 import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
@@ -197,8 +195,9 @@ public class UserService {
                 authType, request.getPhoneNumber(), request.getPhoneCode()
         );
 
-        if (!verification.isVerified()) {
-            throw new GlobalException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        // 이미 인증되었는지 확인
+        if (verification.isVerified()) {
+            throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
         }
 
         User user = userRepository.findByUsernameAndPhoneNumber(
@@ -219,7 +218,7 @@ public class UserService {
     }
 
     @Transactional
-    public void passwordVerifyUser(PasswordVerifyUserRequest request) {
+    public String passwordVerifyUser(PasswordVerifyUserRequest request) {
 
         // 인증코드 검증
         AuthType authType = AuthType.FIND_PASSWORD;
@@ -228,12 +227,12 @@ public class UserService {
                 authType, request.getPhoneNumber(), request.getPhoneCode()
         );
 
-        if (!verification.isVerified()) {
-            throw new GlobalException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        if (verification.isVerified()) {
+            throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
         }
 
         // 사용자 검증
-        User user = userRepository.findByUsernameAndPhoneNumber(
+        userRepository.findByUsernameAndPhoneNumber(
                 request.getUsername(), request.getPhoneNumber()
         ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
@@ -242,10 +241,57 @@ public class UserService {
 
         // reauth token 발급
         String reauthToken = jwtTokenProvider.createReauthenticateToken(
-                request.getUsername(), request.getEmail(), request.getPhoneNumber()
+                request.getUsername(),
+                request.getEmail(),
+                request.getPhoneNumber(),
+                request.getPhoneCode()
         );
 
+        // 토큰 저장
         reauthTokenService.save(request.getEmail(), reauthToken);
 
+        return reauthToken;
+    }
+
+    // 비밀번호 변경 검증
+    @Transactional
+    public void verifyAndResetPassword(PasswordResetRequest request, String reauthToken) {
+        AuthType authType = AuthType.FIND_PASSWORD;
+
+        // 토큰 유효성 검증
+        if (!jwtTokenProvider.validateToken(reauthToken)) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 클레임 추출
+        Claims claims = jwtTokenProvider.getClaims(reauthToken);
+        String username = claims.get("username", String.class);
+        String email = claims.get("email", String.class);
+        String phoneNumber = claims.get("phoneNumber", String.class);
+        String phoneCode = claims.get("phoneCode", String.class);
+
+        // 인증 여부 확인
+        PhoneVerification verification = getVerification(
+                authType, phoneNumber, phoneCode
+        );
+
+        if (!verification.isVerified()) {
+            throw new GlobalException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 사용자 확인
+        User user = userRepository.findByEmailAndUsername(email, username)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+
+
+        // 비밀번호와 비밀번호 확인 비교
+        if (!request.getNewPassword().equals(request.getPasswordCheck())) {
+            throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
+        }
+
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.updatePassword(encodedPassword);
+
+        userRepository.save(user);
     }
 }
