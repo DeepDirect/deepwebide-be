@@ -42,6 +42,9 @@ public enum ErrorCode {
     VERIFICATION_CODE_INVALID(HttpStatus.BAD_REQUEST, "인증번호가 올바르지 않습니다."),
     VERIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다."),
 
+    NOT_OWNER(HttpStatus.BAD_REQUEST, "오너만 이름을 변경할 수 있습니다."), //오너만 이름 변경!!
+    REPOSITORY_NAME_TOO_LONG(HttpStatus.BAD_REQUEST, "레포지토리 이름은 50자 이하여야 합니다."), // 레포지토리 이름 길이 제한
+
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
     WRONG_PASSWORD(HttpStatus.UNAUTHORIZED, "아이디 혹은 비밀번호가 일치하지 않습니다."),

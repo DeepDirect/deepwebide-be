@@ -4,8 +4,10 @@ import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
+import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -73,5 +75,16 @@ public class RepositoryController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
         RepositoryListResponse response = repositoryService.getMyRepositories(userDetails.getId(), pageable);
         return ResponseEntity.ok(ApiResponseDto.of(200, "개인 레포 페이지 조회에 성공했습니다.", response));
+    }
+
+    @PatchMapping("/{repositoryId}")
+    @Operation(summary = "레포지토리 이름 변경", description = "오너가 본인의 레포지토리 이름을 변경합니다.")
+    public ResponseEntity<ApiResponseDto<RepositoryRenameResponse>> renameRepository(
+            @PathVariable Long repositoryId,
+            @RequestBody @Valid RepositoryRenameRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        RepositoryRenameResponse response = repositoryService.renameRepository(repositoryId, userDetails.getId(), request);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 이름이 변경 되었습니다.", response));
     }
 }
