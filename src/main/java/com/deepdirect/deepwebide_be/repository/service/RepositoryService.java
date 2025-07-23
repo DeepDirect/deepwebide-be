@@ -194,6 +194,7 @@ public class RepositoryService {
             );
         } else {
             repo.setShareLink(null);
+            entryCodeRepository.deleteByRepositoryId(repositoryId);
         }
 
         return RepositoryResponse.from(repo);
