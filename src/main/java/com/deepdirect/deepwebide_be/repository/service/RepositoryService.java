@@ -6,6 +6,7 @@ import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
@@ -13,7 +14,9 @@ import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryCreateResp
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryRenameResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryListResponse;
+import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +24,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +35,7 @@ public class RepositoryService {
 
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
+    private final RepositoryEntryCodeRepository entryCodeRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -150,6 +156,48 @@ public class RepositoryService {
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
                 .build();
+    }
+    @Transactional
+    public RepositoryResponse toggleShareStatus(Long repositoryId, Long userId) {
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.getOwner().getId().equals(userId)) {
+            if (repo.isShared()) {
+                throw new GlobalException(ErrorCode.NOT_OWNER_TO_UNSHARE);
+            } else {
+                throw new GlobalException(ErrorCode.NOT_OWNER_TO_SHARE);
+            }
+        }
+
+        boolean willShare = !repo.isShared();
+        repo.setShared(willShare);
+
+        if (willShare) {
+            repo.setShareLink("https://webide.app/repositories" + repositoryId);
+
+            entryCodeRepository.findByRepositoryId(repositoryId).ifPresentOrElse(
+                    entry -> {
+                        entry.updateEntryCode(
+                                EntryCodeGenerator.generateUniqueCode(entryCodeRepository::existsByEntryCode),
+                                LocalDateTime.now().plusDays(3)
+                        );
+                    },
+                    () -> {
+                        RepositoryEntryCode newCode = RepositoryEntryCode.builder()
+                                .repository(repo)
+                                .entryCode(EntryCodeGenerator.generateUniqueCode(entryCodeRepository::existsByEntryCode))
+                                .expiresAt(LocalDateTime.now().plusDays(3))
+                                .build();
+                        entryCodeRepository.save(newCode);
+                    }
+            );
+        } else {
+            repo.setShareLink(null);
+            entryCodeRepository.deleteByRepositoryId(repositoryId);
+        }
+
+        return RepositoryResponse.from(repo);
     }
 
 }

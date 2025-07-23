@@ -13,4 +13,6 @@ public interface RepositoryEntryCodeRepository extends JpaRepository<RepositoryE
     boolean existsByEntryCode(String entryCode);
 
     Optional<RepositoryEntryCode> findByRepositoryId(Long id);
+
+    void deleteByRepositoryId(Long repositoryId);
 }
