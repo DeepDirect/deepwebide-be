@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.member.service;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.deepdirect.deepwebide_be.global.security.ReauthTokenService;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import com.deepdirect.deepwebide_be.member.domain.AuthType;
 import com.deepdirect.deepwebide_be.member.domain.PhoneVerification;
@@ -45,6 +46,7 @@ public class UserService {
     private final ProfileImageService profileImageService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
+    private final ReauthTokenService reauthTokenService;
 
     private String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
@@ -243,6 +245,7 @@ public class UserService {
                 request.getUsername(), request.getEmail(), request.getPhoneNumber()
         );
 
+        reauthTokenService.save(request.getEmail(), reauthToken);
 
     }
 }
