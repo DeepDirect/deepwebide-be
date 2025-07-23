@@ -27,7 +27,7 @@ public class EmailVerificationController {
             summary = "이메일 인증"
     )
     @GetMapping("/send-code")
-    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestBody String code) {
+    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String code) {
         boolean result = emailVerificationService.verifyEmailCode(code);
         Map<String, Object> response = new HashMap<>();
 
