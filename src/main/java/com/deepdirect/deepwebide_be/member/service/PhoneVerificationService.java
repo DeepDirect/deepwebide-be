@@ -57,7 +57,7 @@ public class PhoneVerificationService {
     // 문자 발송
     public int sendVerificationCode(String phoneNumber, String reqUserName, AuthType reqAuthType) {
 
-        if (isUserExists(phoneNumber, reqUserName)) {
+        if (reqAuthType == AuthType.SIGN_UP && isUserExists(phoneNumber, reqUserName)) {
             throw new GlobalException(ErrorCode.DUPLICATE_NAME_AND_PHONE);
         }
 
