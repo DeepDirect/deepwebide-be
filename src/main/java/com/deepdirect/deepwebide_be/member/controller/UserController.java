@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.member.controller;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.member.dto.request.*;
 import com.deepdirect.deepwebide_be.member.dto.response.*;
+import com.deepdirect.deepwebide_be.member.service.TokenService;
 import com.deepdirect.deepwebide_be.member.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final TokenService tokenService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponseDto<SignUpResponse>> signUp(@Valid @RequestBody SignUpRequest signUpRequest) {
@@ -86,5 +88,14 @@ public class UserController {
     ) {
         userService.verifyAndResetPassword(request, authorizationHeader);
         return ResponseEntity.ok(ApiResponseDto.of(200, "비밀번호가 재설정되었습니다.", null));
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<ApiResponseDto<TokenResponse>> reissueAccessToken(
+            @CookieValue("refreshToken") String refreshToken
+    ) {
+        String result = tokenService.reissueAccessToken(refreshToken);
+        TokenResponse response = new TokenResponse(result);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "토큰 재발급에 성공했습니다.", response));
     }
 }
