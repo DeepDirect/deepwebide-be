@@ -15,6 +15,6 @@ public class PasswordResetRequest {
     private String newPassword;
 
     @NotBlank(message = "비밀번호 확인 입력이 누락되었습니다.")
-    @Schema(description = "새로운 비밀번호", example = "!@#123qweR")
+    @Schema(description = "새로운 비밀번호 확인", example = "!@#123qweR")
     private String passwordCheck;
 }
