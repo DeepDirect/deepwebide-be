@@ -1,15 +1,12 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
-import com.deepdirect.deepwebide_be.member.dto.request.FindEmailRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.EmailCheckRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
-import com.deepdirect.deepwebide_be.member.dto.request.SignUpRequest;
-import com.deepdirect.deepwebide_be.member.dto.response.FindEmailResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.EmailCheckResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
-import com.deepdirect.deepwebide_be.member.dto.response.SignUpResponse;
+import com.deepdirect.deepwebide_be.member.dto.request.*;
+import com.deepdirect.deepwebide_be.member.dto.response.*;
+import com.deepdirect.deepwebide_be.member.service.TokenService;
 import com.deepdirect.deepwebide_be.member.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final TokenService tokenService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponseDto<SignUpResponse>> signUp(@Valid @RequestBody SignUpRequest signUpRequest) {
@@ -73,5 +71,31 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(
                 200, "사용 가능한 이메일입니다.", emailCheckResponse
         ));
+    }
+
+    @PostMapping("/password/verify-user")
+    public ResponseEntity<ApiResponseDto<PasswordVerifyUserResponse>> verifyUser(@Valid @RequestBody PasswordVerifyUserRequest request) {
+        String reauthToken = userService.passwordVerifyUser(request);
+        PasswordVerifyUserResponse response = new PasswordVerifyUserResponse(reauthToken);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "본인 인증에 성공했습니다.", response));
+    }
+
+    @Operation(summary = "비밀번호 재설정", security = @SecurityRequirement(name = "Authorization"))
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponseDto<Void>> resetPassword(
+            @Valid @RequestBody PasswordResetRequest request,
+            @RequestHeader("Authorization") String authorizationHeader
+    ) {
+        userService.verifyAndResetPassword(request, authorizationHeader);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "비밀번호가 재설정되었습니다.", null));
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<ApiResponseDto<TokenResponse>> reissueAccessToken(
+            @CookieValue("refreshToken") String refreshToken
+    ) {
+        String result = tokenService.reissueAccessToken(refreshToken);
+        TokenResponse response = new TokenResponse(result);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "토큰 재발급에 성공했습니다.", response));
     }
 }
