@@ -63,17 +63,12 @@ public class RepositoryService {
     }
 
     public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -85,18 +80,13 @@ public class RepositoryService {
     }
 
     public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -107,17 +97,12 @@ public class RepositoryService {
                 .build();
     }
     public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -308,5 +293,18 @@ public class RepositoryService {
     private User getUserOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private PageRequest getSortedPageable(Pageable pageable) {
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+    }
+
+    private List<RepositoryResponse> convertToListRepo(Page<Repository> repositoryPage) {
+        return repositoryPage.stream()
+                .map(RepositoryResponse::from)
+                .collect(Collectors.toList());
     }
 }
