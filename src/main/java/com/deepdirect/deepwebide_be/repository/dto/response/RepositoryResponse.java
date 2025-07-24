@@ -39,8 +39,7 @@ public class RepositoryResponse {
     @Schema(description = "즐겨찾기 여부", example = "true")
     private boolean isFavorite;
 
-    // TODO: 즐겨찾기 여부를 외부에서 전달받도록 개선 필요
-    public static RepositoryResponse from(Repository repo) {
+    public static RepositoryResponse from(Repository repo, boolean isFavorite) {
         return RepositoryResponse.builder()
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
@@ -50,7 +49,7 @@ public class RepositoryResponse {
                 .shareLink(repo.getShareLink())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
-                .isFavorite(false)
+                .isFavorite(isFavorite)
                 .build();
     }
 }
