@@ -36,7 +36,7 @@ public class RepositoryEntryCodeController {
     }
 
 
-    @GetMapping("/{repositoryId}/entryCode")
+    @GetMapping("/{repositoryId}/entrycode")
     @Operation(summary = "입장 코드 확인", description = "공유된 레포지토리의 입장 코드를 오너가 확인합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryEntryCodeResponse>> getEntryCode(
             @PathVariable Long repositoryId,
@@ -46,7 +46,8 @@ public class RepositoryEntryCodeController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "입장코드 확인이 성공했습니다.", response));
     }
 
-    @PostMapping("/{repositoryId}/new-entryCode")
+    @PostMapping("/{repositoryId}/new-entrycode")
+    @Operation(summary = "입장 코드 재발급", description = "공유된 레포지토리의 입장 코드를 오너가 재발급합니다.")
     public ResponseEntity<ApiResponseDto<Map<String, String>>> regenerateEntryCode(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -61,7 +62,7 @@ public class RepositoryEntryCodeController {
         );
     }
 
-    @PostMapping("/{repositoryId}/entryCode")
+    @PostMapping("/{repositoryId}/entrycode")
     @Operation(summary = "입장 코드 검증 및 레포 참여", description = "공유된 레포지토리에 입장 코드를 통해 사용자를 참여자로 등록합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryJoinResponse>> verifyEntryCodeAndJoin(
             @PathVariable Long repositoryId,

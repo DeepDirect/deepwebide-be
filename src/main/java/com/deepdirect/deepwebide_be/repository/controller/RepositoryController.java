@@ -87,6 +87,7 @@ public class RepositoryController {
     }
 
     @PostMapping("/{repositoryId}")
+    @Operation(summary = "레포지토리 공유 상태 변경", description = "오너가 레포지토리 공유 상태를 토글합니다. 공유 중이면 공유가 취소되고, 비공유 상태면 공유로 전환됩니다.")
     public ResponseEntity<ApiResponseDto<RepositoryResponse>> toggleRepositoryShare(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -101,6 +102,7 @@ public class RepositoryController {
     }
 
     @DeleteMapping("/{repositoryId}")
+    @Operation(summary = "레포지토리 삭제", description = "오너가 자신의 개인 레포지토리를 삭제합니다.")
     public ResponseEntity<ApiResponseDto<Void>> deleteRepository(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
