@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.global.security;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,10 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private final JwtTokenProvider jwtTokenProvider;
-    private final UserDetailsService userDetailsService; // 추가
 
-    // 생성자 주입
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserDetailsService userDetailsService;
+
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
@@ -29,27 +30,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain chain)
             throws ServletException, IOException {
+
         try {
             String uri = request.getRequestURI();
-            if (uri.equals("/api/auth/password/reset")) {
+
+            if (
+                    uri.startsWith("/swagger-ui") ||
+                            uri.startsWith("/v3/api-docs") ||
+                            uri.startsWith("/swagger-resources") ||
+                            uri.startsWith("/webjars") ||
+                            uri.startsWith("/h2-console") ||
+
+                            // 정확하게 허용할 /api/auth 경로만 명시
+                            uri.equals("/api/auth/signin") ||
+                            uri.equals("/api/auth/signup") ||
+                            uri.equals("/api/auth/email/find") ||
+                            uri.equals("/api/auth/email/check") ||
+                            uri.equals("/api/auth/password/verify-user") ||
+//                            uri.equals("/api/auth/password/reset") ||
+                            uri.equals("/api/auth/token") ||
+                            uri.equals("/api/auth/phone/send-code") ||
+                            uri.equals("/api/auth/phone/verify-code") ||
+                            uri.equals("/api/auth/email/send-code")
+
+            ) {
                 chain.doFilter(request, response);
                 return;
             }
 
-            String token = resolveToken(request); // ❗ 여기서 예외 발생 가능
+            String token = resolveToken(request); // MISSING_TOKEN 발생 가능
+            jwtTokenProvider.validateToken(token); // INVALID_TOKEN 발생 가능
 
-            if (token != null && jwtTokenProvider.validateToken(token)) {
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(String.valueOf(userId));
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            }
+            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(String.valueOf(userId));
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             chain.doFilter(request, response);
 
         } catch (GlobalException ex) {
-            // JSON 형태로 응답
             response.setStatus(ex.getErrorCode().getStatus().value());
             response.setContentType("application/json;charset=UTF-8");
 
@@ -58,18 +78,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     ex.getErrorCode().getMessage()
             );
 
-            // JSON 변환 (ObjectMapper 사용)
-            new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getWriter(), errorResponse);
+            new ObjectMapper().writeValue(response.getWriter(), errorResponse);
         }
     }
 
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
-
         if (bearer == null || !bearer.startsWith("Bearer ")) {
             throw new GlobalException(ErrorCode.MISSING_TOKEN);
         }
-
         return bearer.substring(7);
     }
 }
