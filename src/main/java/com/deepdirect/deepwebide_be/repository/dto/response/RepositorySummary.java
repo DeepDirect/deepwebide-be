@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-@Schema(description = "레포지토리 요약 정보")
+@Schema(description = "레포지토리 요약 정보 (접근권한확인)")
 public class RepositorySummary {
 
     @Schema(description = "레포지토리 고유 Id", example = "1")

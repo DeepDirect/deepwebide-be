@@ -26,31 +26,37 @@ public class RepositoryFavoriteService {
     public FavoriteToggleResponse toggleFavorite(Long repositoryId, Long userId) {
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        User user = getUserOrThrow(userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        return favoriteRepository.findByUserAndRepository(user, repository)
+                .map(existing -> removeFavorite(existing, user, repository))
+                .orElseGet(() -> addFavorite(user, repository));
+    }
 
-        Optional<RepositoryFavorite> favorite =
-                favoriteRepository.findByUserAndRepository(user, repository);
+    private FavoriteToggleResponse removeFavorite(RepositoryFavorite existing, User user, Repository repository) {
+        favoriteRepository.deleteByUserAndRepository(user, repository);
+        return buildResponse(false, "레포지토리가 즐겨찾기에서 취소되었습니다.");
+    }
 
-        if (favorite.isPresent()) {
-            favoriteRepository.deleteByUserAndRepository(user, repository);
-            return FavoriteToggleResponse.builder()
-                    .isFavorite(false)
-                    .message("레포지토리가 즐겨찾기에 등록 취소되었습니다.")
-                    .build();
-        }
-
-        RepositoryFavorite newFavorite = RepositoryFavorite.builder()
+    private FavoriteToggleResponse addFavorite(User user, Repository repository) {
+        RepositoryFavorite favorite = RepositoryFavorite.builder()
                 .user(user)
                 .repository(repository)
                 .build();
-        favoriteRepository.save(newFavorite);
+        favoriteRepository.save(favorite);
+        return buildResponse(true, "레포지토리가 즐겨찾기에 등록되었습니다.");
+    }
 
+    private FavoriteToggleResponse buildResponse(boolean isFavorite, String message) {
         return FavoriteToggleResponse.builder()
-                .isFavorite(true)
-                .message("레포지토리가 즐겨찾기에 등록되었습니다.")
+                .isFavorite(isFavorite)
+                .message(message)
                 .build();
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
     }
 
 

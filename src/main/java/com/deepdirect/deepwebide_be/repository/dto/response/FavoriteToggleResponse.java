@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@Schema(description = "즐겨찾기 토글 응답")
+@Schema(description = "즐겨찾기 토글 응답 DTO")
 public class FavoriteToggleResponse {
 
     @Schema(description = "현재 즐겨찾기 상태", example = "true")

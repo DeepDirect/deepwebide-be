@@ -39,8 +39,7 @@ public class RepositoryService {
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        User owner = getUserOrThrow(ownerId);
 
         if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(request.getRepositoryName(), ownerId)) {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
@@ -64,17 +63,12 @@ public class RepositoryService {
     }
 
     public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -86,18 +80,13 @@ public class RepositoryService {
     }
 
     public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -108,17 +97,12 @@ public class RepositoryService {
                 .build();
     }
     public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -174,7 +158,7 @@ public class RepositoryService {
         repo.updateSharedStatus(willShare);
 
         if (willShare) {
-            repo.setShareLink("https://webide.app/repositories" + repositoryId);
+            repo.setShareLink("https://api.deepdirect.site/" + repositoryId);
 
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresentOrElse(
                     entry -> {
@@ -272,7 +256,7 @@ public class RepositoryService {
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
-        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
 
         // 접근 권한 없으면 예외
         if (!isOwner && !isMember && repository.isShared()) {
@@ -304,5 +288,23 @@ public class RepositoryService {
                 .shareLink(repository.getShareLink())
                 .members(memberInfos)
                 .build();
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private PageRequest getSortedPageable(Pageable pageable) {
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+    }
+
+    private List<RepositoryResponse> convertToListRepo(Page<Repository> repositoryPage) {
+        return repositoryPage.stream()
+                .map(RepositoryResponse::from)
+                .collect(Collectors.toList());
     }
 }

@@ -10,8 +10,13 @@ import org.springframework.data.domain.Pageable;
 @org.springframework.stereotype.Repository
 public interface RepositoryRepository extends JpaRepository<Repository, Long> {
 
-    boolean existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(String repositoryName, Long ownerId);
+    // 조회 (소유자 기준)
     Page<Repository> findByOwnerIdAndDeletedAtIsNull(Long ownerId, Pageable pageable);
     Page<Repository> findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(Long ownerId, Pageable pageable);
+
+    // 조회 (참여자 기준)
     Page<Repository> findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(Long userId, RepositoryMemberRole role, Pageable pageable);
+
+    // 존재 확인
+    boolean existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(String repositoryName, Long ownerId);
 }

@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeR
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryJoinResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryEntryCodeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
+@Tag(name = "EntryCode", description = "레포지토리 입장 코드 관련 API")
 public class RepositoryEntryCodeController {
 
     private final RepositoryEntryCodeService entryCodeService;
@@ -47,6 +49,7 @@ public class RepositoryEntryCodeController {
     }
 
     @PostMapping("/{repositoryId}/new-entrycode")
+    @Operation(summary = "입장 코드 재발급", description = "공유된 레포지토리의 입장 코드를 오너가 재발급합니다.")
     public ResponseEntity<ApiResponseDto<Map<String, String>>> regenerateEntryCode(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -61,7 +64,7 @@ public class RepositoryEntryCodeController {
         );
     }
 
-    @PostMapping("/{repositoryId}/entryCode")
+    @PostMapping("/{repositoryId}/entrycode")
     @Operation(summary = "입장 코드 검증 및 레포 참여", description = "공유된 레포지토리에 입장 코드를 통해 사용자를 참여자로 등록합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryJoinResponse>> verifyEntryCodeAndJoin(
             @PathVariable Long repositoryId,

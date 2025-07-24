@@ -10,11 +10,13 @@ import java.util.Optional;
 @Repository
 public interface RepositoryEntryCodeRepository extends JpaRepository<RepositoryEntryCode, Long> {
 
+    // 조회
+    Optional<RepositoryEntryCode> findByRepositoryId(Long id);
     Optional<RepositoryEntryCode> findByRepositoryIdAndExpiresAtAfter(Long repositoryId, LocalDateTime now);
 
+    // 존재 확인
     boolean existsByEntryCode(String entryCode);
 
-    Optional<RepositoryEntryCode> findByRepositoryId(Long id);
-
+    // 삭제
     void deleteByRepositoryId(Long repositoryId);
 }

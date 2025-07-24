@@ -10,7 +10,9 @@ import java.util.Optional;
 @Repository
 public interface RepositoryFavoriteRepository extends JpaRepository<RepositoryFavorite, Long> {
 
+    // 조회
     Optional<RepositoryFavorite> findByUserAndRepository(User user, com.deepdirect.deepwebide_be.repository.domain.Repository repository);
 
+    //삭제
     void deleteByUserAndRepository(User user, com.deepdirect.deepwebide_be.repository.domain.Repository repository);
 }
