@@ -146,7 +146,7 @@ public class RepositoryService {
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(userId)
-                .ownerName(repo.getOwner().getUsername())
+                .ownerName(repo.getOwner().getNickname())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
                 .build();
