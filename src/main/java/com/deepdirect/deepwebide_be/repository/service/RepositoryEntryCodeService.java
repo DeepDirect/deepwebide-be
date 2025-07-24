@@ -69,12 +69,6 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(ErrorCode.INVALID_ENTRY_CODE);
         }
 
-        // 중복 참여 방지
-        boolean alreadyActiveMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
-        if (alreadyActiveMember) {
-            throw new GlobalException(ErrorCode.ALREADY_JOINED);
-        }
-
         long activeMemberCount = repositoryMemberRepository.countByRepositoryIdAndDeletedAtIsNull(repositoryId);
         if (activeMemberCount >= 4) {
             throw new GlobalException(ErrorCode.REPOSITORY_MEMBER_LIMIT_EXCEEDED);
@@ -82,21 +76,13 @@ public class RepositoryEntryCodeService {
 
         User user = userRepository.getReferenceById(userId);
 
-        // 기존에 soft delete 된 참여자 존재 시 복구
-        Optional<RepositoryMember> deletedMemberOpt = repositoryMemberRepository
-                .findByRepositoryIdAndUserIdAndDeletedAtIsNotNull(repositoryId, userId);
-
-        if (deletedMemberOpt.isPresent()) {
-            RepositoryMember deletedMember = deletedMemberOpt.get();
-            deletedMember.restore(); // 💡 새로운 메서드 추가 필요: this.deletedAt = null;
-        } else {
-            RepositoryMember member = RepositoryMember.builder()
-                    .repository(repo)
-                    .user(user)
-                    .role(RepositoryMemberRole.MEMBER)
-                    .build();
-            repositoryMemberRepository.save(member);
-        }
+        // 항상 새로운 참여자 생성(중복 여부는 이전에 검증)
+        RepositoryMember newMember = RepositoryMember.builder()
+                .repository(repo)
+                .user(user)
+                .role(RepositoryMemberRole.MEMBER)
+                .build();
+        repositoryMemberRepository.save(newMember);
 
         return RepositoryJoinResponse.builder()
                 .repositoryId(repo.getId())
