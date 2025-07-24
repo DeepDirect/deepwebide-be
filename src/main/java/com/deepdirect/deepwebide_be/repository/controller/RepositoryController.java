@@ -47,10 +47,11 @@ public class RepositoryController {
     public ResponseEntity<ApiResponseDto<RepositoryListResponse>> getSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "7") int size
+            @RequestParam(defaultValue = "7") int size,
+            @RequestParam(required = false) Boolean liked
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
-        RepositoryListResponse response = repositoryService.getSharedRepositories(userDetails.getId(), pageable);
+        RepositoryListResponse response = repositoryService.getSharedRepositories(userDetails.getId(), pageable, liked);
         return ResponseEntity.ok(ApiResponseDto.of(200, "공유 중인 레포 페이지 조회에 성공했습니다.", response));
     }
 
@@ -59,10 +60,12 @@ public class RepositoryController {
     public ResponseEntity<ApiResponseDto<RepositoryListResponse>> getReceivedSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "7") int size
+            @RequestParam(defaultValue = "7") int size,
+            @RequestParam(required = false) Boolean liked
+
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.asc("repositoryName")));
-        RepositoryListResponse response = repositoryService.getReceivedSharedRepositories(userDetails.getId(), pageable);
+        RepositoryListResponse response = repositoryService.getReceivedSharedRepositories(userDetails.getId(), pageable, liked);
         return ResponseEntity.ok(ApiResponseDto.of(200, "공유받은 레포 페이지 조회에 성공했습니다.", response));
     }
 

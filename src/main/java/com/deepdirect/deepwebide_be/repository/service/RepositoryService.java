@@ -62,13 +62,21 @@ public class RepositoryService {
                 .build();
     }
 
-    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage, userId);
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -79,14 +87,22 @@ public class RepositoryService {
                 .build();
     }
 
-    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage, userId);
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
