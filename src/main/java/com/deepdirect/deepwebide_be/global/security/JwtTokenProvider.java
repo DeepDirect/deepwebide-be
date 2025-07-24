@@ -77,9 +77,13 @@ public class JwtTokenProvider {
     // JWT 토큰 유효성 검증
     public void validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
+                    .build()
+                    .parseClaimsJws(token);
         } catch (SecurityException | MalformedJwtException | ExpiredJwtException |
-                 UnsupportedJwtException | IllegalArgumentException e) {
+                 UnsupportedJwtException | IllegalArgumentException |
+                 io.jsonwebtoken.security.SignatureException e) {
             throw new GlobalException(ErrorCode.INVALID_TOKEN);
         }
     }
