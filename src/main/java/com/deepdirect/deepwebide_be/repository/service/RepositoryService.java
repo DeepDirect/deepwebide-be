@@ -308,24 +308,24 @@ public class RepositoryService {
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
         boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
+        boolean isShared = repository.isShared();
 
         // 접근 권한 없으면 예외
-        if (!isOwner && !isMember && repository.isShared()) {
+        if (!isOwner && !isMember && isShared) {
             throw new GlobalException(ErrorCode.FORBIDDEN);
         }
 
         List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
 
-        if (repository.isShared()) {
+        if (isShared) {
             List<RepositoryMember> members = repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId);
             for (RepositoryMember member : members) {
                 User user = member.getUser();
-
                 memberInfos.add(RepositorySettingResponse.MemberInfo.builder()
                         .userId(user.getId())
                         .nickname(user.getNickname())
                         .profileImageUrl(user.getProfileImageUrl())
-                        .role(member.getRole().name()) // "OWNER" or "MEMBER"
+                        .role(member.getRole()) // "OWNER" or "MEMBER"
                         .build());
             }
         }
@@ -335,7 +335,7 @@ public class RepositoryService {
                 .repositoryName(repository.getRepositoryName())
                 .createdAt(repository.getCreatedAt())
                 .updatedAt(repository.getUpdatedAt())
-                .IsShared(repository.isShared())
+                .IsShared(isShared)
                 .shareLink(repository.getShareLink())
                 .members(memberInfos)
                 .build();
@@ -364,3 +364,4 @@ public class RepositoryService {
                 .anyMatch(fav -> fav.getUser().getId().equals(userId));
     }
 }
+

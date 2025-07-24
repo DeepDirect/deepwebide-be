@@ -1,5 +1,6 @@
 package com.deepdirect.deepwebide_be.repository.dto.response;
 
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,8 +46,9 @@ public class RepositorySettingResponse {
         @Schema(description = "프로필 이미지 URL")
         private String profileImageUrl;
 
-        @Schema(description = "레포 내 역할", example = "OWNER or MEMBER")
-        private String role;
+        @Schema(description = "레포 내 역할", example = "OWNER", allowableValues = {"OWNER", "MEMBER"})
+        private RepositoryMemberRole role;
     }
 
 }
+
