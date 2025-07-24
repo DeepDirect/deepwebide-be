@@ -7,6 +7,7 @@ import com.deepdirect.deepwebide_be.member.service.TokenService;
 import com.deepdirect.deepwebide_be.member.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +24,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
+@Tag(name = "User", description = "회원가입, 로그인, 비밀번호 재설정 등 사용자 인증 API")
 public class UserController {
 
     private final UserService userService;
     private final TokenService tokenService;
 
+    @Operation(summary = "회원가입")
     @PostMapping("/signup")
     public ResponseEntity<ApiResponseDto<SignUpResponse>> signUp(@Valid @RequestBody SignUpRequest signUpRequest) {
         SignUpResponse response = userService.signup(signUpRequest);
@@ -35,6 +38,7 @@ public class UserController {
                 .body(ApiResponseDto.of(201, "회원가입이 완료되었습니다.", response));
     }
 
+    @Operation(summary = "로그인")
     @PostMapping("/signin")
     public ResponseEntity<ApiResponseDto<SignInResponse>> signIn(
             @Valid @RequestBody SignInRequest signInRequest,
@@ -46,6 +50,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그인에 성공했습니다.", response));
     }
 
+    @Operation(summary = "로그아웃",security = @SecurityRequirement(name = "Authorization"))
     @PostMapping("/signout")
     public ResponseEntity<ApiResponseDto<Void>> signOut(
             @RequestHeader("Authorization") String authorizationHeader,
@@ -55,12 +60,14 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 
+    @Operation(summary = "이메일(아이디) 찾기")
     @PostMapping("/email/find")
     public ResponseEntity<ApiResponseDto<FindEmailResponse>> findEmail(@Valid @RequestBody FindEmailRequest request) {
         FindEmailResponse response = new FindEmailResponse(userService.findEmail(request));
         return ResponseEntity.ok(ApiResponseDto.of(200, "이메일(아이디)을 찾았습니다.", response));
     }
 
+    @Operation(summary = "이메일 중복 확인")
     @PostMapping("/email/check")
     public ResponseEntity<ApiResponseDto<EmailCheckResponse>> checkEmail(
             @Valid @RequestBody EmailCheckRequest emailCheckRequest) {
@@ -73,6 +80,7 @@ public class UserController {
         ));
     }
 
+    @Operation(summary = "비밀번호 변경 전 본인 인증")
     @PostMapping("/password/verify-user")
     public ResponseEntity<ApiResponseDto<PasswordVerifyUserResponse>> verifyUser(@Valid @RequestBody PasswordVerifyUserRequest request) {
         String reauthToken = userService.passwordVerifyUser(request);
@@ -90,6 +98,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "비밀번호가 재설정되었습니다.", null));
     }
 
+    @Operation(summary = "AccessToken 재발급")
     @PostMapping("/token")
     public ResponseEntity<ApiResponseDto<TokenResponse>> reissueAccessToken(
             @CookieValue("refreshToken") String refreshToken
