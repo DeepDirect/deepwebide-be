@@ -158,7 +158,7 @@ public class RepositoryService {
         repo.updateSharedStatus(willShare);
 
         if (willShare) {
-            repo.setShareLink("https://webide.app/repositories" + repositoryId);
+            repo.setShareLink("https://api.deepdirect.site/" + repositoryId);
 
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresentOrElse(
                     entry -> {
