@@ -15,4 +15,6 @@ public interface RepositoryFavoriteRepository extends JpaRepository<RepositoryFa
 
     //삭제
     void deleteByUserAndRepository(User user, com.deepdirect.deepwebide_be.repository.domain.Repository repository);
+
+
 }

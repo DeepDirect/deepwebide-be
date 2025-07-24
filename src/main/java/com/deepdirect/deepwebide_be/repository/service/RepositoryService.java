@@ -13,6 +13,7 @@ import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateReque
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
+import com.deepdirect.deepwebide_be.repository.repository.RepositoryFavoriteRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
@@ -36,6 +37,7 @@ public class RepositoryService {
     private final UserRepository userRepository;
     private final RepositoryEntryCodeRepository entryCodeRepository;
     private final RepositoryMemberRepository repositoryMemberRepository;
+    private final RepositoryFavoriteRepository repositoryFavoriteRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -209,12 +211,23 @@ public class RepositoryService {
                         entryCodeRepository.save(newCode);
                     }
             );
+
         } else {
+            // 공유 취소 시: 연결된 모든 멤버 soft delete (본인 제외)
+            repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId).stream()
+                    .filter(member -> !member.getUser().getId().equals(userId))
+                    .forEach(RepositoryMember::softDelete);
+
+            // 링크 및 엔트리코드 삭제
             repo.setShareLink(null);
             entryCodeRepository.deleteByRepositoryId(repositoryId);
         }
 
-        return RepositoryResponse.from(repo, isFavoriteByUser(repo, userId));
+        boolean isFavorite = repositoryFavoriteRepository
+                .findByUserAndRepository(userRepository.getReferenceById(userId), repo)
+                .isPresent();
+
+        return RepositoryResponse.from(repo, isFavorite);
     }
 
     @Transactional
