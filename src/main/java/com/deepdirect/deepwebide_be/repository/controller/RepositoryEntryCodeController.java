@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeR
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryJoinResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryEntryCodeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
+@Tag(name = "EntryCode", description = "레포지토리 입장 코드 관련 API")
 public class RepositoryEntryCodeController {
 
     private final RepositoryEntryCodeService entryCodeService;

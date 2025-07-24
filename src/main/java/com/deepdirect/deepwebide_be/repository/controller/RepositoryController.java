@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameReque
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
+@Tag(name = "Repository", description = "레포지토리 생성, 조회, 공유, 삭제, 환경설정 등 기능 API")
 public class RepositoryController {
 
     private final RepositoryService repositoryService;

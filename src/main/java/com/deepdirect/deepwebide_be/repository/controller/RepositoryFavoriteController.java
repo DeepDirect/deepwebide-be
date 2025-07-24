@@ -5,6 +5,7 @@ import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.FavoriteToggleResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryFavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
+@Tag(name = "Favorite", description = "레포지토리 즐겨찾기 등록/취소 API")
 public class RepositoryFavoriteController {
     private final RepositoryFavoriteService repositoryFavoriteService;
 
