@@ -37,7 +37,7 @@ public class RepositoryResponse {
     private LocalDateTime updatedAt;
 
     @Schema(description = "즐겨찾기 여부", example = "true")
-    private boolean isFavorite;
+    private boolean IsFavorite;
 
     public static RepositoryResponse from(Repository repo, boolean isFavorite) {
         return RepositoryResponse.builder()
@@ -49,7 +49,7 @@ public class RepositoryResponse {
                 .shareLink(repo.getShareLink())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
-                .isFavorite(isFavorite)
+                .IsFavorite(isFavorite)
                 .build();
     }
 }
