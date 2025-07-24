@@ -62,13 +62,21 @@ public class RepositoryService {
                 .build();
     }
 
-    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -79,14 +87,22 @@ public class RepositoryService {
                 .build();
     }
 
-    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
+    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -96,13 +112,22 @@ public class RepositoryService {
                 .repositories(sharedRepositoryDtos)
                 .build();
     }
-    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
+
+    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
-                .findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
+                .findByOwnerIdAndIsSharedFalseAndDeletedAtIsNull(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = convertToListRepo(repositoryPage);
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -112,6 +137,7 @@ public class RepositoryService {
                 .repositories(sharedRepositoryDtos)
                 .build();
     }
+
     @Transactional
     public RepositoryRenameResponse renameRepository(Long repoId, Long userId, RepositoryRenameRequest req) {
         Repository repo = repositoryRepository.findById(repoId)
@@ -136,7 +162,7 @@ public class RepositoryService {
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(userId)
-                .ownerName(repo.getOwner().getUsername())
+                .ownerName(repo.getOwner().getNickname())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
                 .build();
@@ -181,8 +207,9 @@ public class RepositoryService {
             entryCodeRepository.deleteByRepositoryId(repositoryId);
         }
 
-        return RepositoryResponse.from(repo);
+        return RepositoryResponse.from(repo, isFavoriteByUser(repo, userId));
     }
+
     @Transactional
     public void deleteRepository(Long repositoryId, Long userId) {
         Repository repo = repositoryRepository.findById(repositoryId)
@@ -284,7 +311,7 @@ public class RepositoryService {
                 .repositoryName(repository.getRepositoryName())
                 .createdAt(repository.getCreatedAt())
                 .updatedAt(repository.getUpdatedAt())
-                .isShared(repository.isShared())
+                .IsShared(repository.isShared())
                 .shareLink(repository.getShareLink())
                 .members(memberInfos)
                 .build();
@@ -302,9 +329,14 @@ public class RepositoryService {
         );
     }
 
-    private List<RepositoryResponse> convertToListRepo(Page<Repository> repositoryPage) {
+    private List<RepositoryResponse> convertToListRepo(Page<Repository> repositoryPage, Long userId) {
         return repositoryPage.stream()
-                .map(RepositoryResponse::from)
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
                 .collect(Collectors.toList());
+    }
+
+    private boolean isFavoriteByUser(Repository repo, Long userId) {
+        return repo.getFavorites().stream()
+                .anyMatch(fav -> fav.getUser().getId().equals(userId));
     }
 }

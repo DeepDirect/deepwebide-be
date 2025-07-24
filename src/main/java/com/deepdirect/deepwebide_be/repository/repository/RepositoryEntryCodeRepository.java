@@ -2,6 +2,8 @@ package com.deepdirect.deepwebide_be.repository.repository;
 
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -18,5 +20,7 @@ public interface RepositoryEntryCodeRepository extends JpaRepository<RepositoryE
     boolean existsByEntryCode(String entryCode);
 
     // 삭제
+    @Modifying
+    @Query("DELETE FROM RepositoryEntryCode e WHERE e.repository.id = :repositoryId")
     void deleteByRepositoryId(Long repositoryId);
 }

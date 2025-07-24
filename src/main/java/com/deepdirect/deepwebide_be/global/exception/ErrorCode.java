@@ -59,9 +59,8 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
     WRONG_PASSWORD(HttpStatus.UNAUTHORIZED, "아이디 혹은 비밀번호가 일치하지 않습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다."),
-    ACCESS_TOKEN_REQUIRED(HttpStatus.UNAUTHORIZED, "AccessToken이 필요합니다."),
-    NOT_ADMIN(HttpStatus.UNAUTHORIZED, "관리자 권한이 없습니다."),
-
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
+    MISSING_TOKEN(HttpStatus.UNAUTHORIZED, "Access Token이 누락되었습니다."),
 
     // 403 FORBIDDEN
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),

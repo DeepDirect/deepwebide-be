@@ -25,7 +25,7 @@ public class RepositoryResponse {
     private String ownerName;
 
     @Schema(description = "공유 여부", example = "true")
-    private boolean isShared;
+    private boolean IsShared;
 
     @Schema(description = "공유 링크", example = "https://webide.app/repositories1")
     private String shareLink;
@@ -37,20 +37,19 @@ public class RepositoryResponse {
     private LocalDateTime updatedAt;
 
     @Schema(description = "즐겨찾기 여부", example = "true")
-    private boolean isFavorite;
+    private boolean IsFavorite;
 
-    // TODO: 즐겨찾기 여부를 외부에서 전달받도록 개선 필요
-    public static RepositoryResponse from(Repository repo) {
+    public static RepositoryResponse from(Repository repo, boolean isFavorite) {
         return RepositoryResponse.builder()
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(repo.getOwner().getId())
                 .ownerName(repo.getOwner().getNickname())
-                .isShared(repo.isShared())
+                .IsShared(repo.isShared())
                 .shareLink(repo.getShareLink())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
-                .isFavorite(false)
+                .IsFavorite(isFavorite)
                 .build();
     }
 }

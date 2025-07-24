@@ -36,7 +36,7 @@ public class RepositoryFavoriteController {
         return ResponseEntity.ok(ApiResponseDto.of(
                 200,
                 response.getMessage(),
-                response
+                null
         ));
     }
 }
