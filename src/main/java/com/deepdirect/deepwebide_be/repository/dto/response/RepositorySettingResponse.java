@@ -24,7 +24,7 @@ public class RepositorySettingResponse {
     private LocalDateTime updatedAt;
 
     @Schema(description = "공유 여부")
-    private boolean isShared;
+    private boolean IsShared;
 
     @Schema(description = "공유 링크", nullable = true)
     private String shareLink;

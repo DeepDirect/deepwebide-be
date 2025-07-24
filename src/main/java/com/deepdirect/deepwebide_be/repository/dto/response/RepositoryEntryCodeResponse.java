@@ -24,7 +24,7 @@ public class RepositoryEntryCodeResponse {
     private String ownerName;
 
     @Schema(description = "공유 여부", example = "true")
-    private boolean isShared;
+    private boolean IsShared;
 
     @Schema(description = "공유 링크", example = "https://webide.app/repository1")
     private String shareLink;

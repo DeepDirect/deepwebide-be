@@ -295,7 +295,7 @@ public class RepositoryService {
                 .repositoryName(repository.getRepositoryName())
                 .createdAt(repository.getCreatedAt())
                 .updatedAt(repository.getUpdatedAt())
-                .isShared(repository.isShared())
+                .IsShared(repository.isShared())
                 .shareLink(repository.getShareLink())
                 .members(memberInfos)
                 .build();

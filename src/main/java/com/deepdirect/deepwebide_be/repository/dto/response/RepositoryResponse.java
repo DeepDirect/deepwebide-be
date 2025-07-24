@@ -25,7 +25,7 @@ public class RepositoryResponse {
     private String ownerName;
 
     @Schema(description = "공유 여부", example = "true")
-    private boolean isShared;
+    private boolean IsShared;
 
     @Schema(description = "공유 링크", example = "https://webide.app/repositories1")
     private String shareLink;
@@ -45,7 +45,7 @@ public class RepositoryResponse {
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(repo.getOwner().getId())
                 .ownerName(repo.getOwner().getNickname())
-                .isShared(repo.isShared())
+                .IsShared(repo.isShared())
                 .shareLink(repo.getShareLink())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
