@@ -18,24 +18,24 @@ public class TokenService {
     private final UserRepository userRepository;
 
     public String reissueAccessToken(String refreshToken) {
-        // 토큰 유효성 검증
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new GlobalException(ErrorCode.INVALID_REFRESH_TOKEN);
-        }
+        // 1. 토큰 유효성 검증 (예외 기반)
+        jwtTokenProvider.validateToken(refreshToken); // ❗예외 발생 시 자동 중단
 
-        // 토큰에서 사용자 ID 추출
+        // 2. 토큰에서 사용자 ID 추출
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
 
-        // 리프레시 토큰 확인
+        // 3. Redis에 저장된 리프레시 토큰과 비교
         String saveToken = refreshTokenService.findByUserId(userId);
         if (saveToken == null || !saveToken.equals(refreshToken)) {
             throw new GlobalException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        // 사용자 조회
-        User user = userRepository.findById(userId).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        // 4. 사용자 검증
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
-        // Access Token 발급
+        // 5. 새 Access Token 발급
         return jwtTokenProvider.createToken(user.getId());
     }
 }
+
