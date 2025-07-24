@@ -98,7 +98,7 @@ public class RepositoryController {
     ) {
         RepositoryResponse response = repositoryService.toggleShareStatus(repositoryId, userDetails.getId());
 
-        String message = response.isShared()
+        String message = response.isIsShared()
                 ? "공유 레포지토리로 전환되었습니다."
                 : "레포지토리 공유가 취소되었습니다.";
 
