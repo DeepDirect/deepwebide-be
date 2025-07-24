@@ -45,17 +45,7 @@ public class RepositoryEntryCodeService {
                     .build();
         }
 
-        RepositorySummary summary = RepositorySummary.builder()
-                .repositoryId(repository.getId())
-                .repositoryName(repository.getRepositoryName())
-                .ownerId(repository.getOwner().getId())
-                .ownerName(repository.getOwner().getNickname())
-                .isShared(repository.isShared())
-                .shareLink(repository.getShareLink())
-                .createdAt(repository.getCreatedAt())
-                .updatedAt(repository.getUpdatedAt())
-                .build();
-
+        RepositorySummary summary = createRepositorySummary(repository);
         return RepositoryAccessCheckResponse.builder()
                 .access(true)
                 .repository(summary)
@@ -168,6 +158,20 @@ public class RepositoryEntryCodeService {
             throw new GlobalException(errorCode);
         }
     }
+
+    private RepositorySummary createRepositorySummary(Repository repo) {
+        return RepositorySummary.builder()
+                .repositoryId(repo.getId())
+                .repositoryName(repo.getRepositoryName())
+                .ownerId(repo.getOwner().getId())
+                .ownerName(repo.getOwner().getNickname())
+                .isShared(repo.isShared())
+                .shareLink(repo.getShareLink())
+                .createdAt(repo.getCreatedAt())
+                .updatedAt(repo.getUpdatedAt())
+                .build();
+    }
+
 
     /**
      * 내부에서 엔트리 코드를 재생성하고 업데이트하는 로직
