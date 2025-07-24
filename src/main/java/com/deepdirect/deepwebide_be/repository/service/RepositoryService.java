@@ -53,6 +53,13 @@ public class RepositoryService {
 
         Repository savedRepository = repositoryRepository.save(repository);
 
+        RepositoryMember ownerMember = RepositoryMember.builder()
+                .repository(savedRepository)
+                .user(owner)
+                .role(RepositoryMemberRole.OWNER)
+                .build();
+        repositoryMemberRepository.save(ownerMember);
+
         return RepositoryCreateResponse.builder()
                 .repositoryId(savedRepository.getId())
                 .repositoryName(savedRepository.getRepositoryName())
@@ -222,6 +229,10 @@ public class RepositoryService {
         if (repo.isShared()) {
             throw new GlobalException(ErrorCode.CANNOT_DELETE_SHARED_REPOSITORY);
         }
+
+        repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                .ifPresent(RepositoryMember::softDelete);
 
         repo.softDelete();
     }
