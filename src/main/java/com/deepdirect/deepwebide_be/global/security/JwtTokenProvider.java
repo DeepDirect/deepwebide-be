@@ -1,5 +1,7 @@
 package com.deepdirect.deepwebide_be.global.security;
 
+import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
+import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -73,12 +75,12 @@ public class JwtTokenProvider {
     }
 
     // JWT 토큰 유효성 검증
-    public boolean validateToken(String token) {
+    public void validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
-            return true;
-        } catch (SecurityException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            return false;
+        } catch (SecurityException | MalformedJwtException | ExpiredJwtException |
+                 UnsupportedJwtException | IllegalArgumentException e) {
+            throw new GlobalException(ErrorCode.INVALID_TOKEN);
         }
     }
 
