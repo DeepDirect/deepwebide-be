@@ -100,18 +100,18 @@ public class RepositoryService {
     public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable, Boolean liked) {
         Pageable sortedPageable = getSortedPageable(pageable);
 
-        Page<Repository> repositoryPage = repositoryRepository.findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
+        Page<Repository> repositoryPage = repositoryRepository
+                .findByOwnerIdAndIsSharedFalseAndDeletedAtIsNull(userId, sortedPageable);
 
         List<Repository> filtered = Boolean.TRUE.equals(liked)
                 ? repositoryPage.stream()
-                .filter(repo -> repo.getFavorites().stream()
-                        .anyMatch(fav -> fav.getUser().getId().equals(userId)))
+                .filter(repo -> isFavoriteByUser(repo, userId))
                 .toList()
                 : repositoryPage.getContent();
 
         List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
                 .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
-                .collect(Collectors.toList());
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
