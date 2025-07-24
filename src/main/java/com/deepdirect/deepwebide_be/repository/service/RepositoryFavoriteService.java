@@ -27,8 +27,7 @@ public class RepositoryFavoriteService {
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        User user = getUserOrThrow(userId);
 
         Optional<RepositoryFavorite> favorite =
                 favoriteRepository.findByUserAndRepository(user, repository);
@@ -51,6 +50,11 @@ public class RepositoryFavoriteService {
                 .isFavorite(true)
                 .message("레포지토리가 즐겨찾기에 등록되었습니다.")
                 .build();
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
     }
 
 

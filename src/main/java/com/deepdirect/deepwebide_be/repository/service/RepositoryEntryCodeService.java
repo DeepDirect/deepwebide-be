@@ -22,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +34,7 @@ public class RepositoryEntryCodeService {
 
     @Transactional(readOnly = true)
     public RepositoryAccessCheckResponse checkAccess(Long repositoryId, Long userId) {
-        Repository repository = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        Repository repository = getRepositoryOrThrow(repositoryId);
 
         Optional<RepositoryMember> optionalMember =
                 repositoryMemberRepository.findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
@@ -68,8 +65,7 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public RepositoryJoinResponse verifyEntryCodeAndJoin(Long repositoryId, String entryCode, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        Repository repo = getRepositoryOrThrow(repositoryId);
 
         if (!repo.isShared()) {
             throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
@@ -126,13 +122,8 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public RepositoryEntryCodeResponse getEntryCode(Long repositoryId, Long userId) {
-
-        Repository repo = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
-
-        if (!repo.getOwner().getId().equals(userId)) {
-            throw new GlobalException(ErrorCode.ENTRY_CODE_ACCESS_DENIED);
-        }
+        Repository repo = getRepositoryOrThrow(repositoryId);
+        validateOwnerOrThrow(repo, userId,ErrorCode.ENTRY_CODE_ACCESS_DENIED);
 
         if (!repo.isShared()) {
             throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
@@ -157,18 +148,25 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public String regenerateEntryCode(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
-
-        if (!repo.getOwner().getId().equals(userId)) {
-            throw new GlobalException(ErrorCode.ENTRY_CODE_REISSUE_DENIED);
-        }
+        Repository repo = getRepositoryOrThrow(repositoryId);
+        validateOwnerOrThrow(repo, userId,ErrorCode.ENTRY_CODE_REISSUE_DENIED);
 
         if (!repo.isShared()) {
             throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
         }
 
         return regenerateEntryCodeInternal(repo).getEntryCode();
+    }
+
+    private Repository getRepositoryOrThrow(Long repositoryId) {
+        return repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+    }
+
+    private void validateOwnerOrThrow(Repository repo, Long userId, ErrorCode errorCode) {
+        if (!repo.getOwner().getId().equals(userId)) {
+            throw new GlobalException(errorCode);
+        }
     }
 
     /**

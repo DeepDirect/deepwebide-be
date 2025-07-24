@@ -39,8 +39,7 @@ public class RepositoryService {
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        User owner = getUserOrThrow(ownerId);
 
         if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(request.getRepositoryName(), ownerId)) {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
@@ -272,7 +271,7 @@ public class RepositoryService {
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
-        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserId(repositoryId, userId);
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
 
         // 접근 권한 없으면 예외
         if (!isOwner && !isMember && repository.isShared()) {
@@ -304,5 +303,10 @@ public class RepositoryService {
                 .shareLink(repository.getShareLink())
                 .members(memberInfos)
                 .build();
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
     }
 }
