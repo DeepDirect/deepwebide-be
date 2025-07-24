@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.repository.controller;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
+import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
@@ -149,6 +150,20 @@ public class RepositoryController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         RepositorySettingResponse response = repositoryService.getRepositorySettings(repositoryId, userDetails.getId());
-        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 환경설정 페이지 조회에 성공했습니다.", response));
+
+        // 응답 메시지 분기
+        String message;
+        if (!response.isIsShared()) {
+            message = "개인 환경설정 페이지 조회에 성공했습니다.";
+        } else {
+            boolean isOwner = response.getMembers().stream()
+                    .anyMatch(m -> m.getUserId().equals(userDetails.getId()) && m.getRole() == RepositoryMemberRole.OWNER);
+            message = isOwner
+                    ? "공유한 환경설정 페이지 조회에 성공했습니다."
+                    : "공유받은 환경설정 페이지 조회에 성공했습니다.";
+        }
+
+        return ResponseEntity.ok(ApiResponseDto.of(200, message, response));
     }
 }
+
