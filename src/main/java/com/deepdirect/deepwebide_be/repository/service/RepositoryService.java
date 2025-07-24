@@ -304,7 +304,7 @@ public class RepositoryService {
         List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
 
         if (repository.isShared()) {
-            List<RepositoryMember> members = repositoryMemberRepository.findAllByRepositoryId(repositoryId);
+            List<RepositoryMember> members = repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId);
             for (RepositoryMember member : members) {
                 User user = member.getUser();
 
