@@ -14,6 +14,9 @@ public interface RepositoryMemberRepository extends JpaRepository<RepositoryMemb
 
     // 조회
     Optional<RepositoryMember> findByRepositoryIdAndUserIdAndDeletedAtIsNull(Long repositoryId, Long userId);
+    Optional<RepositoryMember> findByRepositoryIdAndUserIdAndDeletedAtIsNotNull(Long repositoryId, Long userId);
+    List<RepositoryMember> findAllByRepositoryId(Long repositoryId);
+
     List<RepositoryMember> findAllByRepositoryIdAndDeletedAtIsNull(Long repositoryId);
 
     // 존재 확인
