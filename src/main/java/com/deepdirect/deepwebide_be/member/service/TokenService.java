@@ -3,7 +3,6 @@ package com.deepdirect.deepwebide_be.member.service;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
-import com.deepdirect.deepwebide_be.global.security.RefreshToken;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
@@ -19,7 +18,7 @@ public class TokenService {
 
     public String reissueAccessToken(String refreshToken) {
         // 1. 토큰 유효성 검증 (예외 기반)
-        jwtTokenProvider.validateToken(refreshToken); // ❗예외 발생 시 자동 중단
+        jwtTokenProvider.validateToken(refreshToken); // 예외 발생 시 자동 중단
 
         // 2. 토큰에서 사용자 ID 추출
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
