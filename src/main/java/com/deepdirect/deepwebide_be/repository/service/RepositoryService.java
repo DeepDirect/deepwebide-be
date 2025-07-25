@@ -193,7 +193,7 @@ public class RepositoryService {
         repo.updateSharedStatus(willShare);
 
         if (willShare) {
-            repo.setShareLink("https://api.deepdirect.site/" + repositoryId);
+            repo.setShareLink("https://www.deepdirect.site/" + repositoryId);
 
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresentOrElse(
                     entry -> {
