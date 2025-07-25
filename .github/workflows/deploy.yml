@@ -32,8 +32,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "build/libs/*.jar"
+          source: "build/libs/*-SNAPSHOT.jar"
           target: "~/app"
+          strip_components: 2
 
 #      - name: Copy deployment script to EC2
 #        uses: appleboy/scp-action@v0.1.7
