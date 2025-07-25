@@ -10,7 +10,7 @@ jobs:
     if: |
       github.event.pull_request.merged == true &&
       github.head_ref == 'develop' &&
-      contains(github.event.pull_request.title, '[deploy]')
+      contains(github.event.pull_request.title, '[Deploy]')
     runs-on: ubuntu-latest
 
     steps:
