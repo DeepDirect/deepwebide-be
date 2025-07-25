@@ -63,3 +63,14 @@ coolsms:
     key: ${COOLSMS_KEY}
     secret: ${COOLSMS_SECRET}
     number: 01037415700
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+  server:
+    port: 8080

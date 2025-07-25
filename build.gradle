@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // @Valid, @NotBlank 등 Bean Validation 처리
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -65,6 +66,8 @@ dependencies {
 
     // DevTools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+
 
     // 테스트 관련 라이브러리
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

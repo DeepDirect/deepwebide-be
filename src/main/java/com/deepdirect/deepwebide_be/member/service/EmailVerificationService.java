@@ -39,7 +39,8 @@ public class EmailVerificationService {
 
     // 이메일 인증 요청 메일 발송
     public void sendVerificationEmail(String email, String code) {
-        String link = "http://localhost:8080/api/auth/email/send-code?code=" + code;
+//        String link = "http://localhost:8080/api/auth/email/send-code?code=" + code;
+        String link = "https://api.deepwebide.site/api/auth/email/send-code?code=" + code;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);

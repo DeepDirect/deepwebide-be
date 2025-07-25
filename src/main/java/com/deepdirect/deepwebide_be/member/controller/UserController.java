@@ -16,10 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(
-    origins = {
-        "http://localhost:5173",
-    },
-    allowCredentials = "true"
+        origins = {
+                "http://localhost:5173",
+                "https://www.deepwebide.site"
+        },
+        allowCredentials = "true"
 )
 @RestController
 @RequiredArgsConstructor
