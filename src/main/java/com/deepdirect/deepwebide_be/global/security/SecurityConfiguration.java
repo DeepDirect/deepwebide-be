@@ -56,7 +56,8 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/swagger-resources/**"),
                                 new AntPathRequestMatcher("/webjars/**"),
                                 new AntPathRequestMatcher("/api/auth/**"),
-                                new AntPathRequestMatcher("/h2-console/**")
+                                new AntPathRequestMatcher("/h2-console/**"),
+                                new AntPathRequestMatcher("/redis-test")
                         ).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/signout")).authenticated()
                         .anyRequest().authenticated()
