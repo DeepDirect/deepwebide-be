@@ -42,6 +42,18 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           envs: SPRING_REDIS_HOST,SPRING_REDIS_PORT,SPRING_REDIS_PASSWORD,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,SPRING_MAIL_PASSWORD,JWT_SECRET,AWS_ACCESS_KEY,AWS_SECRET_KEY,COOLSMS_KEY,COOLSMS_SECRET
+        env:
+          SPRING_REDIS_HOST: ${{ secrets.SPRING_REDIS_HOST }}
+          SPRING_REDIS_PORT: ${{ secrets.SPRING_REDIS_PORT }}
+          SPRING_REDIS_PASSWORD: ${{ secrets.SPRING_REDIS_PASSWORD }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          COOLSMS_KEY: ${{ secrets.COOLSMS_KEY }}
+          COOLSMS_SECRET: ${{ secrets.COOLSMS_SECRET }}
           script: |
             cd ~/app
             bash deploy.sh
