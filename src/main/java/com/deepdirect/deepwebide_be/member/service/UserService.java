@@ -130,8 +130,15 @@ public class UserService {
         refreshCookie.setHttpOnly(true);
         refreshCookie.setPath("/");
         refreshCookie.setMaxAge(60 * 60 * 24 * 14); // 2주
-        refreshCookie.setSecure(false); // 운영에서는 true 권장
+        refreshCookie.setSecure(true); // SameSite=None 사용 시 필수
         servletResponse.addCookie(refreshCookie);
+
+        // SameSite=None 설정을 위한 Set-Cookie 헤더 추가
+        servletResponse.setHeader(
+                "Set-Cookie",
+                "refreshToken=" + refreshToken + "; HttpOnly; Secure; Path=/; Max-Age=" + (60 * 60 * 24 * 14) + "; SameSite=None"
+        );
+
 
         return new SignInResponse(accessToken, new SignInUserDto(user));
     }
@@ -155,9 +162,10 @@ public class UserService {
         cookie.setMaxAge(0);
         response.addCookie(cookie);
 
+        // SameSite=None 설정을 위한 Set-Cookie 헤더로 쿠키 삭제
         response.setHeader(
                 "Set-Cookie",
-                "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+                "refreshToken=; HttpOnly; Secure; Path=/; Max-Age=0; SameSite=None"
         );
     }
 
