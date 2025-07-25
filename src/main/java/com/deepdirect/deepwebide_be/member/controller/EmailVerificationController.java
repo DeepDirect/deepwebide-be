@@ -14,6 +14,7 @@ import java.util.Map;
 @CrossOrigin(
         origins = {
                 "http://localhost:5173",
+                "https://www.deepwebide.site"
         },
         allowCredentials = "true"
 )
