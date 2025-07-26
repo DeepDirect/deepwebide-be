@@ -21,7 +21,7 @@ public class RepositoryFavoriteController {
     @PostMapping("/{repositoryId}/favorite")
     @Operation(
             summary = "레포지토리 즐겨찾기 등록/취소",
-            description = "레포지토리에 대해 즐겨찾기 등록 또는 취소를 토글합니다."
+            description = "해당 레포지토리에 대해 즐겨찾기 상태를 토글합니다. 이미 즐겨찾기된 경우 취소되며, 그렇지 않은 경우 등록됩니다."
     )
     public ResponseEntity<ApiResponseDto<FavoriteToggleResponse>> toggleFavorite(
             @PathVariable Long repositoryId,
