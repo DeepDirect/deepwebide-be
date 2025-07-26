@@ -5,6 +5,9 @@ import com.deepdirect.deepwebide_be.member.dto.request.*;
 import com.deepdirect.deepwebide_be.member.dto.response.*;
 import com.deepdirect.deepwebide_be.member.service.TokenService;
 import com.deepdirect.deepwebide_be.member.service.UserService;
+import com.deepdirect.deepwebide_be.sentry.SentryUserContextService;
+import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +33,7 @@ public class UserController {
 
     private final UserService userService;
     private final TokenService tokenService;
+    private final SentryUserContextService sentryUserContextService;
 
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
@@ -47,17 +51,37 @@ public class UserController {
     ) {
         // 1. 서비스에서 로그인 + 토큰 2개 발급
         SignInResponse response = userService.signIn(signInRequest, servletResponse);
+
+        // ★ Sentry Scope에 유저 정보 세팅
+        sentryUserContextService.setCurrentUserContext();
+
+        // ★ Sentry 메시지로 로그인 이벤트 기록
+        Sentry.captureMessage(
+                "로그인: " + response.getUser().getUsername() + ": " + response.getUser().getNickname(),
+                SentryLevel.INFO
+        );
+
         // response(본문)는 AccessToken만, RefreshToken은 쿠키로 헤더에 내려감!
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그인에 성공했습니다.", response));
     }
 
-    @Operation(summary = "로그아웃",security = @SecurityRequirement(name = "Authorization"))
+    @Operation(summary = "로그아웃", security = @SecurityRequirement(name = "Authorization"))
     @PostMapping("/signout")
     public ResponseEntity<ApiResponseDto<Void>> signOut(
             @RequestHeader("Authorization") String authorizationHeader,
             HttpServletResponse response
     ) {
         userService.signOut(authorizationHeader, response);
+
+        // 1. 토큰에서 유저 정보 추출해서 Sentry 컨텍스트 세팅 & username 반환
+        String usernameWithNickname = sentryUserContextService.setUserContextFromToken(authorizationHeader);
+
+        // 2. 누가 로그아웃했는지 메시지 기록
+        Sentry.captureMessage("로그아웃: " + usernameWithNickname, SentryLevel.INFO);
+
+        // 3. Sentry Scope에서 유저 정보 제거
+        sentryUserContextService.clearUserContext();
+
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
     }
 
