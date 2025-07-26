@@ -18,14 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(
-        origins = {
-                "http://localhost:5173",
-                "https://www.deepwebide.site",
-                "https://api.deepdirect.site"
-        },
-        allowCredentials = "true"
-)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
