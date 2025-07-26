@@ -157,9 +157,6 @@ public class RepositoryService {
         }
 
         String newName = req.getRepositoryName();
-        if (newName.length() > 50) {
-            throw new GlobalException(ErrorCode.REPOSITORY_NAME_TOO_LONG);
-        }
         if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(newName, userId)) {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
         }
