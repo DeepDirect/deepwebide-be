@@ -44,7 +44,7 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: 1800000
+  access-token-expiration: 86400000
   refresh-token-expiration: 1209600000
 
 cloud:
@@ -74,3 +74,17 @@ management:
       show-details: always
   server:
     port: 8080
+
+sentry:
+  dsn: ${SENTRY_DSN}
+  traces-sample-rate: 0.1
+  environment: production
+  release: 1.0.0
+  debug: true
+
+logging:
+  level:
+    io:
+      sentry: INFO
+    com:
+      deepdirect: DEBUG

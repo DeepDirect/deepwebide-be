@@ -53,6 +53,7 @@ jobs:
             export AWS_SECRET_KEY="${{ secrets.AWS_SECRET_KEY }}"
             export COOLSMS_KEY="${{ secrets.COOLSMS_KEY }}"
             export COOLSMS_SECRET="${{ secrets.COOLSMS_SECRET }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
             
             cd ~/app
             bash deploy.sh
