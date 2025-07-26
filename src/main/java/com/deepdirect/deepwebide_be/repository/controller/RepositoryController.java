@@ -44,7 +44,7 @@ public class RepositoryController {
     }
 
     @GetMapping("/shared")
-    @Operation(summary = "공유 레포 조회", description = "공유된 레포지토리 목록을 페이지 단위로 조회합니다.")
+    @Operation(summary = "공유 레포 목록 조회", description = "내가 공유한 레포지토리 목록을 페이지 단위로 조회합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryListResponse>> getSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
@@ -57,7 +57,7 @@ public class RepositoryController {
     }
 
     @GetMapping("/shared/me")
-    @Operation(summary = "공유받은 레포 조회", description = "공유받은 레포지토리 목록을 페이지 단위로 조회합니다.")
+    @Operation(summary = "공유받은 레포 조회", description = "다른 사용자가 공유한 레포지토리 중 내가 참여 중인 레포 목록을 페이지 단위로 조회합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryListResponse>> getReceivedSharedRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
@@ -71,7 +71,7 @@ public class RepositoryController {
     }
 
     @GetMapping("/mine")
-    @Operation(summary = "개인 레포 조회", description = "사용자의 개인 레포지토리 목록을 페이지 단위로 조회합니다.")
+    @Operation(summary = "내 개인 레포 목록 조회", description = "내가 생성한 개인 레포지토리 목록을 페이지 단위로 조회합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryListResponse>> getMyRepositories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
@@ -144,7 +144,7 @@ public class RepositoryController {
     }
 
     @GetMapping("/{repositoryId}/settings")
-    @Operation(summary = "레포지토리 환경설정 정보 조회")
+    @Operation(summary = "레포지토리 환경설정 조회", description = "개인/공유/공유받은 레포지토리의 환경설정 정보를 조회합니다.")
     public ResponseEntity<ApiResponseDto<RepositorySettingResponse>> getRepositorySettings(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
