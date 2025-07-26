@@ -80,7 +80,7 @@ sentry:
   traces-sample-rate: 0.1
   environment: production
   release: 1.0.0
-  debug: true
+  debug: false
 
 logging:
   level:
