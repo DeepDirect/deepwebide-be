@@ -21,14 +21,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 
-@CrossOrigin(
-        origins = {
-                "http://localhost:5173",
-                "https://www.deepwebide.site",
-                "https://api.deepdirect.site"
-        },
-        allowCredentials = "true"
-)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
