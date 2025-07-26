@@ -36,17 +36,35 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://www.deepdirect.site", "https://api.deepdirect.site")); // Vite
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin"
+
+        // 개발/운영 환경별 허용 도메인 설정
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",     // 개발환경 (모든 포트)
+                "https://localhost:*",    // HTTPS 로컬
+                "https://www.deepdirect.site",  // 프론트엔드
+                "https://api.deepdirect.site"   // API 도메인 (필요시)
         ));
-        configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
+
+        // 허용할 HTTP 메서드
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        // 허용할 헤더
+        configuration.setAllowedHeaders(List.of("*")); // 모든 헤더 허용
+
+        // 노출할 헤더 (클라이언트에서 접근 가능한 헤더)
+        configuration.setExposedHeaders(List.of(
+                "Authorization",
+                "Set-Cookie",
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials"
+        ));
+
+        // 쿠키/인증 정보 허용
         configuration.setAllowCredentials(true);
+
+        // 프리플라이트 요청 캐시 시간
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
