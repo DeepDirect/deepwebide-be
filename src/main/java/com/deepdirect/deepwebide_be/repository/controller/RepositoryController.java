@@ -24,7 +24,8 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(
         origins = {
                 "http://localhost:5173",
-                "https://www.deepwebide.site"
+                "https://www.deepwebide.site",
+                "https://api.deepdirect.site"
         },
         allowCredentials = "true"
 )
