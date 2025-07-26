@@ -39,13 +39,15 @@ public class RepositoryEntryCodeService {
         Optional<RepositoryMember> optionalMember =
                 repositoryMemberRepository.findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
 
+        RepositorySummary summary = createRepositorySummary(repository);
+
         if (!repository.isShared() || optionalMember.isEmpty()) {
             return RepositoryAccessCheckResponse.builder()
                     .access(false)
+                    .repository(summary)
                     .build();
         }
 
-        RepositorySummary summary = createRepositorySummary(repository);
         return RepositoryAccessCheckResponse.builder()
                 .access(true)
                 .repository(summary)

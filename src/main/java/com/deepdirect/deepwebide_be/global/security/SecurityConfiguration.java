@@ -1,5 +1,6 @@
 package com.deepdirect.deepwebide_be.global.security;
 
+import com.deepdirect.deepwebide_be.sentry.SentryUserContextFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +25,8 @@ import java.util.List;
 public class SecurityConfiguration {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserDetailsService userDetailsService; // 반드시 추가
+    private final UserDetailsService userDetailsService;
+    private final SentryUserContextFilter sentryUserContextFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -67,16 +69,18 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/webjars/**"),
                                 new AntPathRequestMatcher("/api/auth/**"),
                                 new AntPathRequestMatcher("/h2-console/**"),
-                                new AntPathRequestMatcher("/redis-test")
+                                new AntPathRequestMatcher("/redis-test"),
+                                new AntPathRequestMatcher("/test/**") // Sentry 테스트용
                         ).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/signout")).authenticated()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService), // 여기!
+                        new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
                         UsernamePasswordAuthenticationFilter.class
-                );
+                )
+                .addFilterAfter(sentryUserContextFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
