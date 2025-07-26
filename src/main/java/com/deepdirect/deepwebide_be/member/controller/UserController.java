@@ -65,7 +65,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그인에 성공했습니다.", response));
     }
 
-    @Operation(summary = "로그아웃",security = @SecurityRequirement(name = "Authorization"))
+    @Operation(summary = "로그아웃", security = @SecurityRequirement(name = "Authorization"))
     @PostMapping("/signout")
     public ResponseEntity<ApiResponseDto<Void>> signOut(
             @RequestHeader("Authorization") String authorizationHeader,
@@ -73,12 +73,13 @@ public class UserController {
     ) {
         userService.signOut(authorizationHeader, response);
 
-        // ★ Sentry 메시지로 로그인 이벤트 기록
-        Sentry.captureMessage(
-                "로그아웃", SentryLevel.INFO);
+        // 1. 토큰에서 유저 정보 추출해서 Sentry 컨텍스트 세팅 & username 반환
+        String usernameWithNickname = sentryUserContextService.setUserContextFromToken(authorizationHeader);
 
+        // 2. 누가 로그아웃했는지 메시지 기록
+        Sentry.captureMessage("로그아웃: " + usernameWithNickname, SentryLevel.INFO);
 
-        // ★ Sentry Scope에서 유저 정보 제거
+        // 3. Sentry Scope에서 유저 정보 제거
         sentryUserContextService.clearUserContext();
 
         return ResponseEntity.ok(ApiResponseDto.of(200, "로그아웃 되었습니다.", null));
