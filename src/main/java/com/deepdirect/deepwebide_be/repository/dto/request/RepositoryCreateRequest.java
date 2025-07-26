@@ -14,7 +14,7 @@ import lombok.Setter;
 @Schema(description = "레포지토리 생성 요청 DTO")
 public class RepositoryCreateRequest {
 
-    public static final String REPO_NAME_REGEX = "^(?![-_])[a-zA-Z0-9가-힣-_]{1,50}$";
+    public static final String REPO_NAME_REGEX = "^(?![-_])[a-zA-Z0-9가-힣-_]+$";
 
     @NotBlank
     @Size(max = 50, message = "레포지토리 이름은 50자 이하여야 합니다.")
