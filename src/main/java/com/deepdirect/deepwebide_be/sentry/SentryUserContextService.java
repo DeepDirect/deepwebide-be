@@ -4,7 +4,6 @@ import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
-import com.deepdirect.deepwebide_be.member.service.UserService;
 import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
