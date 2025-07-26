@@ -44,12 +44,13 @@ public class SentryUserContextService {
                 scope.setTag("user_id", domainUser.getId() != null ? String.valueOf(domainUser.getId()) : "unknown");
                 scope.setTag("user_email", domainUser.getEmail());
                 scope.setTag("user_name", domainUser.getUsername());
+                scope.setTag("user_nickname", domainUser.getNickname() != null ? domainUser.getNickname() : "unknown");
 
                 scope.setExtra("user_created_at", domainUser.getCreatedAt() != null ? domainUser.getCreatedAt().toString() : "unknown");
                 scope.setExtra("authenticated", String.valueOf(true));
             });
 
-            log.debug("🎭 Sentry에 사용자 정보 설정 완료: {}", domainUser.getUsername());
+            log.debug("🎭 Sentry에 사용자 정보 설정 완료: {}", domainUser.getUsername() + ": " + domainUser.getNickname());
         }
     }
 
