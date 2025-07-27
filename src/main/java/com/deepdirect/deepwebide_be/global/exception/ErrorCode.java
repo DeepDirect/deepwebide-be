@@ -53,7 +53,9 @@ public enum ErrorCode {
 
     // 500 INTERNAL SERVER ERROR
     ENTRY_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "입장 코드 생성에 실패했습니다. 다시 시도해주세요."),
-    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 발송 실패");
+    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 발송 실패"),
+    TEMPLATE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "레포지토리 템플릿 파일 초기화에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    NO_AVAILABLE_PORT(HttpStatus.INTERNAL_SERVER_ERROR, "사용 가능한 실행 포트가 없습니다.");
 
     private final HttpStatus status;
     private final String message;
