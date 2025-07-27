@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.file.controller;
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
 import com.deepdirect.deepwebide_be.file.dto.request.FileMoveRequest;
 import com.deepdirect.deepwebide_be.file.dto.request.FileRenameRequest;
+import com.deepdirect.deepwebide_be.file.dto.response.FileContentResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
@@ -87,5 +88,16 @@ public class FileController {
         FileNodeResponse result = fileService.moveFileOrFolder(
                 repositoryId, fileId, userDetails.getId(), req.getNewParentId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "이동이 완료되었습니다.", result));
+    }
+
+    @Operation(summary = "파일 내용 조회", description = "파일의 내용을 조회합니다.")
+    @GetMapping("/{repositoryId}/files/{fileId}/content")
+    public ResponseEntity<ApiResponseDto<FileContentResponse>> getFileContent(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long fileId
+    ) {
+        FileContentResponse response = fileService.getFileContent(repositoryId, fileId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "파일 내용 조회 성공", response));
     }
 }

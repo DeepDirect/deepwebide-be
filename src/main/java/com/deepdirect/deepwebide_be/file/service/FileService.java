@@ -4,6 +4,7 @@ import com.deepdirect.deepwebide_be.file.domain.FileContent;
 import com.deepdirect.deepwebide_be.file.domain.FileNode;
 import com.deepdirect.deepwebide_be.file.domain.FileType;
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
+import com.deepdirect.deepwebide_be.file.dto.response.FileContentResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
@@ -263,6 +264,35 @@ public class FileService {
         return false;
     }
 
+    @Transactional(readOnly = true)
+    public FileContentResponse getFileContent(Long repositoryId, Long fileId, Long userId) {
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 파일 노드 조회
+        FileNode fileNode = fileNodeRepository.findById(fileId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+
+        // 3. 폴더는 열 수 없음
+        if (fileNode.getFileType() == FileType.FOLDER) {
+            throw new GlobalException(ErrorCode.CANNOT_OPEN_FOLDER);
+        }
+
+        // 4. 파일 내용 조회
+        FileContent fileContent = fileContentRepository.findByFileNode(fileNode)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_CONTENT_NOT_FOUND));
+
+        // 5. byte[] → String 변환 (기본 UTF-8, 파일별 인코딩은 필요에 따라 처리)
+        String content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+
+        return FileContentResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .path(fileNode.getPath())
+                .content(content)
+                .build();
+    }
 
 
 }
