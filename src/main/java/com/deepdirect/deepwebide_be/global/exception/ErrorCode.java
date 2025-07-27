@@ -27,6 +27,7 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일을 찾을 수 없습니다."),
     INVALID_PARENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일/폴더 타입입니다."),
     DUPLICATE_FILE_NAME(HttpStatus.BAD_REQUEST,"동일한 이름의 파일이 이미 존재합니다."),
+    CANNOT_MOVE_TO_CHILD(HttpStatus.BAD_REQUEST, "자신의 하위 폴더로 이동할 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
