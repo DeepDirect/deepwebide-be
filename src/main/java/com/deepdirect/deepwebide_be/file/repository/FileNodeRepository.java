@@ -14,4 +14,6 @@ public interface FileNodeRepository extends JpaRepository<FileNode, Long> {
 
     List<FileNode> findAllByParent(FileNode parent);
 
+    boolean existsByRepositoryIdAndParentAndName(Long repositoryId, FileNode parent, String name);
+
 }
