@@ -24,6 +24,9 @@ public enum ErrorCode {
     CANNOT_DELETE_SHARED_REPOSITORY(HttpStatus.BAD_REQUEST, "공유 중인 레포지토리는 삭제할 수 없습니다."),
     NOT_MEMBER(HttpStatus.BAD_REQUEST,"레포지토리 멤버가 아닙니다."),
     CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST,"자기 자신은 강퇴할 수 없습니다."),
+    FILE_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일을 찾을 수 없습니다."),
+    INVALID_PARENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일/폴더 타입입니다."),
+    DUPLICATE_FILE_NAME(HttpStatus.BAD_REQUEST,"동일한 이름의 파일이 이미 존재합니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
