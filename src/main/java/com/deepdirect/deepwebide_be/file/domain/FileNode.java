@@ -48,4 +48,9 @@ public class FileNode {
     public boolean isFolder() {
         return this.fileType == FileType.FOLDER;
     }
+
+    public void moveToParent(FileNode newParent, String newParentPath) {
+        this.parent = newParent;
+        this.path = newParentPath.isEmpty() ? this.name : newParentPath + "/" + this.name;
+    }
 }
