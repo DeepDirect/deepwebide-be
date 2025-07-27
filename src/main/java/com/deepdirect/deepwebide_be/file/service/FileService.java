@@ -5,6 +5,7 @@ import com.deepdirect.deepwebide_be.file.domain.FileNode;
 import com.deepdirect.deepwebide_be.file.domain.FileType;
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
 import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
+import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
 import com.deepdirect.deepwebide_be.file.repository.FileContentRepository;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
@@ -84,7 +85,11 @@ public class FileService {
         }
 
         // 3. 중복 이름 체크 (동일 폴더 하위에 동일 이름, 파일/폴더 구분X)
-        if (fileNodeRepository.existsByRepositoryIdAndParentAndName(repositoryId, parent, req.getFileName())) {
+        if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
+                repositoryId,
+                req.getParentId(),
+                req.getFileName()
+        )) {
             throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
         }
 
@@ -118,5 +123,46 @@ public class FileService {
                 .parentId(parent == null ? null : parent.getId())
                 .path(fileNode.getPath())
                 .build();
+    }
+
+    @Transactional
+    public FileRenameResponse renameFileOrFolder(Long repositoryId, Long fileId, Long userId, String newFileName) {
+        // 1. 레포지토리/권한 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 파일/폴더 찾기
+        FileNode fileNode = fileNodeRepository.findById(fileId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+
+        // 3. 같은 폴더 내에 동일 이름 존재 체크
+        Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
+        boolean isDuplicate = fileNodeRepository.existsByRepositoryIdAndParentIdAndName(repositoryId, parentId, newFileName);
+        if (isDuplicate) {
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        }
+
+        // 4. 이름 변경 + 경로(path) 재계산
+        fileNode.rename(newFileName); // FileNode 엔티티에 rename 메소드(이름/path 수정) 필요
+
+        // 5. 하위 모든 파일/폴더 경로(path)도 재귀적으로 수정 (폴더일 경우)
+        updateChildPathsRecursively(fileNode);
+
+        // 6. 결과 반환
+        return FileRenameResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .path(fileNode.getPath())
+                .build();
+    }
+
+    // 하위 경로 업데이트 (폴더 재귀)
+    private void updateChildPathsRecursively(FileNode parentNode) {
+        if (!parentNode.isFolder()) return;
+        List<FileNode> children = fileNodeRepository.findAllByParent(parentNode);
+        for (FileNode child : children) {
+            child.updatePath(parentNode.getPath() + "/" + child.getName());
+            updateChildPathsRecursively(child);
+        }
     }
 }

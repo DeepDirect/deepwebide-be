@@ -1,7 +1,9 @@
 package com.deepdirect.deepwebide_be.file.controller;
 
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
+import com.deepdirect.deepwebide_be.file.dto.request.FileRenameRequest;
 import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
+import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
 import com.deepdirect.deepwebide_be.file.service.FileService;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
@@ -43,5 +45,22 @@ public class FileController {
     ) {
         FileNodeResponse response = fileService.createFileOrFolder(repositoryId, userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponseDto.of(201, "파일 및 폴더 생성이 성공했습니다.", response));
+    }
+
+    @Operation(summary = "파일/폴더 이름 변경", description = "파일 또는 폴더의 이름을 변경합니다.")
+    @PatchMapping("/{repositoryId}/files/{fileId}/rename")
+    public ResponseEntity<ApiResponseDto<FileRenameResponse>> renameFileOrFolder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long fileId,
+            @RequestBody FileRenameRequest request
+    ) {
+        FileRenameResponse response = fileService.renameFileOrFolder(
+                repositoryId,
+                fileId,
+                userDetails.getId(),
+                request.getNewFileName()
+        );
+        return ResponseEntity.ok(ApiResponseDto.of(200, "이름이 변경되었습니다.", response));
     }
 }
