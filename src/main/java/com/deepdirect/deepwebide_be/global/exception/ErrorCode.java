@@ -28,6 +28,8 @@ public enum ErrorCode {
     INVALID_PARENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일/폴더 타입입니다."),
     DUPLICATE_FILE_NAME(HttpStatus.BAD_REQUEST,"동일한 이름의 파일이 이미 존재합니다."),
     CANNOT_MOVE_TO_CHILD(HttpStatus.BAD_REQUEST, "자신의 하위 폴더로 이동할 수 없습니다."),
+    CANNOT_OPEN_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 열 수 없습니다."),
+    FILE_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일 내용이 존재하지 않습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
