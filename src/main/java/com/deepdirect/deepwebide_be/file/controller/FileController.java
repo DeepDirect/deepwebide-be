@@ -63,4 +63,15 @@ public class FileController {
         );
         return ResponseEntity.ok(ApiResponseDto.of(200, "이름이 변경되었습니다.", response));
     }
+
+    @Operation(summary = "파일/폴더 삭제", description = "특정 파일/폴더 및 하위 모두 삭제")
+    @DeleteMapping("/{repositoryId}/files/{fileId}")
+    public ResponseEntity<ApiResponseDto<Void>> deleteFileOrFolder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long fileId
+    ) {
+        fileService.deleteFileOrFolder(repositoryId, fileId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "삭제가 완료되었습니다.", null));
+    }
 }

@@ -165,4 +165,43 @@ public class FileService {
             updateChildPathsRecursively(child);
         }
     }
+
+    @Transactional
+    public void deleteFileOrFolder(Long repositoryId, Long fileId, Long userId) {
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 파일/폴더 존재 체크
+        FileNode node = fileNodeRepository.findById(fileId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+
+        // 3. (폴더일 경우) 하위 전체 삭제 (재귀)
+        if (node.isFolder()) {
+            deleteChildrenRecursively(node);
+        }
+
+        // 4. 파일 내용 삭제 (FileType.FILE)
+        if (node.getFileType() == FileType.FILE) {
+            fileContentRepository.deleteByFileNode(node);
+        }
+
+        // 5. 자기 자신 삭제
+        fileNodeRepository.delete(node);
+    }
+
+    // 하위 전체 삭제 재귀
+    private void deleteChildrenRecursively(FileNode parent) {
+        List<FileNode> children = fileNodeRepository.findAllByParent(parent);
+        for (FileNode child : children) {
+            if (child.isFolder()) {
+                deleteChildrenRecursively(child);
+            }
+            if (child.getFileType() == FileType.FILE) {
+                fileContentRepository.deleteByFileNode(child);
+            }
+            fileNodeRepository.delete(child);
+        }
+    }
+
 }
