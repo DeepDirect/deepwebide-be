@@ -41,15 +41,10 @@ public class RepositoryEntryCodeService {
 
         RepositorySummary summary = createRepositorySummary(repository);
 
-        if (!repository.isShared() || optionalMember.isEmpty()) {
-            return RepositoryAccessCheckResponse.builder()
-                    .access(false)
-                    .repository(summary)
-                    .build();
-        }
+        boolean access = optionalMember.isPresent();
 
         return RepositoryAccessCheckResponse.builder()
-                .access(true)
+                .access(access)
                 .repository(summary)
                 .build();
     }
