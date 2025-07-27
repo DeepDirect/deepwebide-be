@@ -42,7 +42,6 @@ public class FileController {
             @RequestBody FileCreateRequest request
     ) {
         FileNodeResponse response = fileService.createFileOrFolder(repositoryId, userDetails.getId(), request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponseDto.of(201, "파일 생성 완료", response));
+        return ResponseEntity.ok(ApiResponseDto.of(201, "파일 및 폴더 생성이 성공했습니다.", response));
     }
 }
