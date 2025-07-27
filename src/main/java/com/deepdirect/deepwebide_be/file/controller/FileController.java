@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.file.controller;
 
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
+import com.deepdirect.deepwebide_be.file.dto.request.FileMoveRequest;
 import com.deepdirect.deepwebide_be.file.dto.request.FileRenameRequest;
 import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
@@ -73,5 +74,18 @@ public class FileController {
     ) {
         fileService.deleteFileOrFolder(repositoryId, fileId, userDetails.getId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "삭제가 완료되었습니다.", null));
+    }
+
+    @Operation(summary = "파일/폴더 이동", description = "파일 또는 폴더를 다른 위치로 이동합니다.")
+    @PatchMapping("/{repositoryId}/files/{fileId}/move")
+    public ResponseEntity<ApiResponseDto<FileNodeResponse>> moveFileOrFolder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long fileId,
+            @RequestBody FileMoveRequest req
+    ) {
+        FileNodeResponse result = fileService.moveFileOrFolder(
+                repositoryId, fileId, userDetails.getId(), req.getNewParentId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "이동이 완료되었습니다.", result));
     }
 }

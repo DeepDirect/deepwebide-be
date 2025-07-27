@@ -204,4 +204,65 @@ public class FileService {
         }
     }
 
+    @Transactional
+    public FileNodeResponse moveFileOrFolder(
+            Long repositoryId, Long fileId, Long userId, Long newParentId) {
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 이동 대상 파일/폴더 찾기
+        FileNode fileNode = fileNodeRepository.findById(fileId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+
+        // 3. 새 부모 폴더 체크
+        FileNode newParent = null;
+        String newParentPath = "";
+        if (newParentId != null) {
+            newParent = fileNodeRepository.findById(newParentId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+            if (!newParent.isFolder()) {
+                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
+            }
+            // 3-1. 순환구조 방지 (본인 또는 하위로 이동 불가)
+            if (isDescendant(fileNode, newParent)) {
+                throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
+            }
+            newParentPath = newParent.getPath();
+        }
+
+        // 4. 같은 폴더에 동일 이름 체크
+        if (fileNodeRepository.existsByRepositoryIdAndParentAndName(
+                repositoryId, newParent, fileNode.getName())) {
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        }
+
+        // 5. parent 변경 & path 재계산
+        fileNode.moveToParent(newParent, newParentPath);
+
+        // 6. 하위 경로 재귀 갱신 (폴더일 경우)
+        updateChildPathsRecursively(fileNode);
+
+        // 7. 저장/응답
+        return FileNodeResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .fileType(fileNode.getFileType().name())
+                .parentId(newParent == null ? null : newParent.getId())
+                .path(fileNode.getPath())
+                .build();
+    }
+
+    // --- 본인 또는 하위로 이동 방지 ---
+    private boolean isDescendant(FileNode node, FileNode targetParent) {
+        FileNode current = targetParent;
+        while (current != null) {
+            if (current.getId().equals(node.getId())) return true;
+            current = current.getParent();
+        }
+        return false;
+    }
+
+
+
 }
