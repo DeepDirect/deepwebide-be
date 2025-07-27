@@ -1,7 +1,12 @@
 package com.deepdirect.deepwebide_be.file.service;
 
+import com.deepdirect.deepwebide_be.file.domain.FileContent;
 import com.deepdirect.deepwebide_be.file.domain.FileNode;
+import com.deepdirect.deepwebide_be.file.domain.FileType;
+import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
+import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
 import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
+import com.deepdirect.deepwebide_be.file.repository.FileContentRepository;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
@@ -9,6 +14,7 @@ import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.ArrayList;
@@ -22,10 +28,11 @@ public class FileService {
 
     private final RepositoryRepository repositoryRepository;
     private final FileNodeRepository fileNodeRepository;
+    private final FileContentRepository fileContentRepository;
 
     public List<FileTreeNodeResponse> getFileTree(Long repositoryId, Long userId) {
         // 1. 레포지토리/권한 체크
-        Repository repo = (Repository) repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         // 2. 해당 레포의 모든 FileNode 조회 (1쿼리)
         List<FileNode> allNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
@@ -57,4 +64,59 @@ public class FileService {
         return roots;
     }
 
+
+    @Transactional
+    public FileNodeResponse createFileOrFolder(Long repositoryId, Long userId, FileCreateRequest req) {
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 부모 폴더 체크
+        FileNode parent = null;
+        String parentPath = "";
+        if (req.getParentId() != null) {
+            parent = fileNodeRepository.findById(req.getParentId())
+                    .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+            if (!parent.getFileType().equals(FileType.FOLDER)) {
+                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
+            }
+            parentPath = parent.getPath();
+        }
+
+        // 3. 중복 이름 체크 (동일 폴더 하위에 동일 이름, 파일/폴더 구분X)
+        if (fileNodeRepository.existsByRepositoryIdAndParentAndName(repositoryId, parent, req.getFileName())) {
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        }
+
+        // 4. 경로 계산
+        String newPath = parentPath.isEmpty() ? req.getFileName() : parentPath + "/" + req.getFileName();
+
+        // 5. FileNode 저장
+        FileNode fileNode = FileNode.builder()
+                .repository(repo)
+                .name(req.getFileName())
+                .fileType(FileType.valueOf(req.getFileType()))
+                .parent(parent)
+                .path(newPath)
+                .build();
+        fileNode = fileNodeRepository.save(fileNode);
+
+        // 6. 파일이면 내용도 생성 (빈 파일)
+        if (fileNode.getFileType() == FileType.FILE) {
+            FileContent content = FileContent.builder()
+                    .fileNode(fileNode)
+                    .content(new byte[0])
+                    .build();
+            fileContentRepository.save(content);
+        }
+
+        // 7. 응답 DTO 반환
+        return FileNodeResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .fileType(fileNode.getFileType().name())
+                .parentId(parent == null ? null : parent.getId())
+                .path(fileNode.getPath())
+                .build();
+    }
 }
