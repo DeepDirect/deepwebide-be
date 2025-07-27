@@ -31,4 +31,21 @@ public class FileNode {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private FileNode parent;
+
+
+    /** 이름과 경로를 동시 변경 (이름 바꿀 때 사용) */
+    public void rename(String newName) {
+        this.name = newName;
+        this.path = (parent == null) ? newName : parent.getPath() + "/" + newName;
+    }
+
+    /** 경로만 변경 (부모 폴더 이름/경로 바뀔 때 하위까지) */
+    public void updatePath(String newPath) {
+        this.path = newPath;
+    }
+
+    /** 폴더인지 체크 */
+    public boolean isFolder() {
+        return this.fileType == FileType.FOLDER;
+    }
 }
