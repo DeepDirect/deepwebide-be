@@ -11,11 +11,9 @@ import java.util.List;
 @Schema(description = "채팅 메시지 리스트 응답")
 public class ChatMessagesResponse {
 
+    @Schema(description = "더 불러올 메시지 존재 여부", example = "true")
+    private final boolean hasMore;
+
     @Schema(description = "채팅 메시지 목록")
     private final List<ChatMessageResponse> messages;
-
-    public ChatMessagesResponse(List<ChatMessageResponse> messages) {
-        this.messages = messages;
-    }
-
 }
