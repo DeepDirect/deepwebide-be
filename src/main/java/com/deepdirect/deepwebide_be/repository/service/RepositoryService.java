@@ -149,7 +149,7 @@ public class RepositoryService {
 
     @Transactional
     public RepositoryRenameResponse renameRepository(Long repoId, Long userId, RepositoryRenameRequest req) {
-        Repository repo = repositoryRepository.findById(repoId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repoId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -175,7 +175,7 @@ public class RepositoryService {
     }
     @Transactional
     public RepositoryResponse toggleShareStatus(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -229,7 +229,7 @@ public class RepositoryService {
 
     @Transactional
     public void deleteRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -249,7 +249,7 @@ public class RepositoryService {
 
     @Transactional
     public void exitSharedRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         RepositoryMember member = repositoryMemberRepository
@@ -271,7 +271,7 @@ public class RepositoryService {
 
     @Transactional
     public KickedMemberResponse kickMember(Long repositoryId, Long ownerId, Long memberId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(ownerId)) {
@@ -300,7 +300,7 @@ public class RepositoryService {
     @Transactional(readOnly = true)
     public RepositorySettingResponse getRepositorySettings(Long repositoryId, Long userId) {
 
-        Repository repository = repositoryRepository.findById(repositoryId)
+        Repository repository = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
