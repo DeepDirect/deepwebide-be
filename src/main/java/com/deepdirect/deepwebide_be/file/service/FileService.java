@@ -4,10 +4,7 @@ import com.deepdirect.deepwebide_be.file.domain.FileContent;
 import com.deepdirect.deepwebide_be.file.domain.FileNode;
 import com.deepdirect.deepwebide_be.file.domain.FileType;
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
-import com.deepdirect.deepwebide_be.file.dto.response.FileContentResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
+import com.deepdirect.deepwebide_be.file.dto.response.*;
 import com.deepdirect.deepwebide_be.file.repository.FileContentRepository;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
@@ -27,6 +24,7 @@ public class FileService {
     private final RepositoryRepository repositoryRepository;
     private final FileNodeRepository fileNodeRepository;
     private final FileContentRepository fileContentRepository;
+    private final FileContentRedisService fileContentRedisService;
 
     public List<FileTreeNodeResponse> getFileTree(Long repositoryId, Long userId) {
         // 1. 레포지토리/권한 체크
@@ -269,7 +267,33 @@ public class FileService {
                 .build();
     }
 
-    // 파일이 진짜 레포 소속인지 검증 ---
+    @Transactional
+    public FileContentSaveResponse saveFileContent(Long repositoryId, Long fileId, Long userId, String content) {
+        // 1. 레포 권한 및 존재 확인
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 파일 노드 + 소속 레포 검증
+        FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
+
+        // 3. 폴더라면 예외
+        if (fileNode.getFileType() == FileType.FOLDER) {
+            throw new GlobalException(ErrorCode.CANNOT_SAVE_FOLDER);
+        }
+
+        // 4. Redis에 파일 내용 저장
+        fileContentRedisService.saveFileContent(repositoryId, fileId, content);
+
+        // 5. 응답 DTO
+        return FileContentSaveResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .path(fileNode.getPath())
+                .updatedAt(java.time.LocalDateTime.now().toString())
+                .build();
+    }
+
+    // 파일이 진짜 레포 소속인지 검증
     private FileNode findFileNodeWithRepositoryCheck(Long repositoryId, Long fileId) {
         FileNode fileNode = fileNodeRepository.findById(fileId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));

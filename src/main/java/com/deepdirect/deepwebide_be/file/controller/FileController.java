@@ -3,17 +3,14 @@ package com.deepdirect.deepwebide_be.file.controller;
 import com.deepdirect.deepwebide_be.file.dto.request.FileCreateRequest;
 import com.deepdirect.deepwebide_be.file.dto.request.FileMoveRequest;
 import com.deepdirect.deepwebide_be.file.dto.request.FileRenameRequest;
-import com.deepdirect.deepwebide_be.file.dto.response.FileContentResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileNodeResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileRenameResponse;
-import com.deepdirect.deepwebide_be.file.dto.response.FileTreeNodeResponse;
+import com.deepdirect.deepwebide_be.file.dto.request.FileContentSaveRequest;
+import com.deepdirect.deepwebide_be.file.dto.response.*;
 import com.deepdirect.deepwebide_be.file.service.FileService;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -98,6 +95,20 @@ public class FileController {
             @PathVariable Long fileId
     ) {
         FileContentResponse response = fileService.getFileContent(repositoryId, fileId, userDetails.getId());
-        return ResponseEntity.ok(ApiResponseDto.of(200, "파일 내용 조회 성공", response));
+        return ResponseEntity.ok(ApiResponseDto.of(200, "파일 내용 조회 성공했습니댜.", response));
+    }
+
+    @Operation(summary = "파일 내용 저장(실시간/레디스)", description = "파일 내용(코드 등)을 1분마다 레디스에 저장")
+    @PutMapping("/{repositoryId}/files/{fileId}/content")
+    public ResponseEntity<ApiResponseDto<FileContentSaveResponse>> saveFileContent(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long fileId,
+            @RequestBody FileContentSaveRequest req
+    ) {
+        FileContentSaveResponse response = fileService.saveFileContent(
+                repositoryId, fileId, userDetails.getId(), req.getContent()
+        );
+        return ResponseEntity.ok(ApiResponseDto.of(200, "파일 내용 저장 완료했습니다.", response));
     }
 }
