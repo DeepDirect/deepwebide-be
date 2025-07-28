@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.history.controller;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.history.dto.request.HistorySaveRequest;
+import com.deepdirect.deepwebide_be.history.dto.response.HistoryDetailResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistorySaveResponse;
 import com.deepdirect.deepwebide_be.history.service.HistoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,5 +30,16 @@ public class HistoryController {
     ) {
         HistorySaveResponse response = historyService.saveHistory(repositoryId, userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponseDto.of(200, "저장에 성공 했습니다. (히스토리 생성됨)", response));
+    }
+
+    @Operation(summary = "히스토리 단건 상세 조회")
+    @GetMapping("/{repositoryId}/histories/{historyId}")
+    public ResponseEntity<ApiResponseDto<HistoryDetailResponse>> getHistoryDetail(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long historyId
+    ) {
+        HistoryDetailResponse resp = historyService.getHistoryDetail(repositoryId, historyId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "히스토리 조회 성공", resp));
     }
 }

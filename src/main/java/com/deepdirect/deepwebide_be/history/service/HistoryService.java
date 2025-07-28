@@ -10,6 +10,7 @@ import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.history.domain.History;
 import com.deepdirect.deepwebide_be.history.domain.HistoryFile;
 import com.deepdirect.deepwebide_be.history.dto.request.HistorySaveRequest;
+import com.deepdirect.deepwebide_be.history.dto.response.HistoryDetailResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistorySaveResponse;
 import com.deepdirect.deepwebide_be.history.repository.HistoryFileRepository;
 import com.deepdirect.deepwebide_be.history.repository.HistoryRepository;
@@ -139,7 +140,6 @@ public class HistoryService {
                 .build();
         fileNode = fileNodeRepository.save(fileNode);
 
-        // 🔥 여기서 클라이언트 fileId로 map에 추가!
         idToNode.put(clientFileId, fileNode);
 
         if (fileNode.getFileType() == FileType.FILE) {
@@ -149,5 +149,38 @@ public class HistoryService {
                     .build();
             fileContentRepository.save(content);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryDetailResponse getHistoryDetail(Long repositoryId, Long historyId, Long userId) {
+        // 1. 권한 체크 & 레포 확인
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 히스토리 조회
+        History history = historyRepository.findById(historyId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.HISTORY_NOT_FOUND));
+
+        if (!history.getRepository().getId().equals(repositoryId)) {
+            throw new GlobalException(ErrorCode.HISTORY_NOT_FOUND);
+        }
+
+        // 3. 파일 목록 조회 (파일만)
+        List<HistoryFile> files = historyFileRepository.findByHistory(history);
+        List<HistoryDetailResponse.HistoryFileDto> fileDtos = files.stream()
+                .filter(f -> "FILE".equals(f.getFileType()))
+                .map(f -> HistoryDetailResponse.HistoryFileDto.builder()
+                        .path(f.getPath())
+                        .content(f.getContent())
+                        .build())
+                .toList();
+
+        // 4. 응답 DTO 빌드
+        return HistoryDetailResponse.builder()
+                .historyId(history.getId())
+                .message(history.getMessage())
+                .createdAt(history.getCreatedAt().toString())
+                .files(fileDtos)
+                .build();
     }
 }
