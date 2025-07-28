@@ -5,17 +5,11 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
-import com.deepdirect.deepwebide_be.repository.domain.Repository;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
+import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryFavoriteRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.repository.*;
 import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,6 +32,8 @@ public class RepositoryService {
     private final RepositoryEntryCodeRepository entryCodeRepository;
     private final RepositoryMemberRepository repositoryMemberRepository;
     private final RepositoryFavoriteRepository repositoryFavoriteRepository;
+    private final RepositoryFileService repositoryFileService;
+    private final PortRegistryRepository portRegistryRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -55,6 +51,15 @@ public class RepositoryService {
 
         Repository savedRepository = repositoryRepository.save(repository);
 
+        PortRegistry availablePort = portRegistryRepository
+                .findFirstByStatusOrderByPortAsc(PortStatus.AVAILABLE)
+                .orElseThrow(() -> new GlobalException(
+                        ErrorCode.NO_AVAILABLE_PORT
+                ));
+        availablePort.setStatus(PortStatus.IN_USE);
+        availablePort.setRepository(savedRepository);
+        portRegistryRepository.save(availablePort);
+
         RepositoryMember ownerMember = RepositoryMember.builder()
                 .repository(savedRepository)
                 .user(owner)
@@ -62,11 +67,18 @@ public class RepositoryService {
                 .build();
         repositoryMemberRepository.save(ownerMember);
 
+        // **S3 템플릿 zip → 압축 해제 → DB 파일/폴더 구조 저장**
+        try {
+            repositoryFileService.initializeTemplateFiles(savedRepository);
+        } catch (Exception e) {
+            throw new GlobalException(ErrorCode.TEMPLATE_DOWNLOAD_FAILED);
+        }
+
         return RepositoryCreateResponse.builder()
                 .repositoryId(savedRepository.getId())
                 .repositoryName(savedRepository.getRepositoryName())
                 .ownerId(owner.getId())
-                .ownerName(owner.getUsername())
+                .ownerName(owner.getNickname())
                 .createdAt(savedRepository.getCreatedAt())
                 .build();
     }
