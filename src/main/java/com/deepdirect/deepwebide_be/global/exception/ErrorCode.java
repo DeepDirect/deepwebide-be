@@ -31,6 +31,7 @@ public enum ErrorCode {
     CANNOT_OPEN_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 열 수 없습니다."),
     FILE_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일 내용이 존재하지 않습니다."),
     CANNOT_SAVE_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 저장할 수 없습니다."),
+    HISTORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 히스토리를 찾을 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
