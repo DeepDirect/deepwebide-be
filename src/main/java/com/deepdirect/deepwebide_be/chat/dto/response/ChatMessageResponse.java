@@ -1,6 +1,5 @@
 package com.deepdirect.deepwebide_be.chat.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,7 +30,7 @@ public class ChatMessageResponse {
     @Schema(description = "코드 참조 목록")
     private final List<CodeReferenceResponse> codeReferences;
 
-    @Schema(description = "내 메시지 여부")
+    @Schema(description = "내 메시지 여부", name = "IsMine")
     private final boolean isMine;
 
     @Schema(description = "보낸 시간", example = "2025-07-25T21:20:00Z")

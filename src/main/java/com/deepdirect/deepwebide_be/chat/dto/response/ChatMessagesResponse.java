@@ -16,4 +16,11 @@ public class ChatMessagesResponse {
 
     @Schema(description = "채팅 메시지 목록")
     private final List<ChatMessageResponse> messages;
+
+    public static ChatMessagesResponse of(boolean hasMore, List<ChatMessageResponse> messages) {
+        return ChatMessagesResponse.builder()
+                .hasMore(hasMore)
+                .messages(messages)
+                .build();
+    }
 }

@@ -1,5 +1,6 @@
 package com.deepdirect.deepwebide_be.chat.dto.response;
 
+import com.deepdirect.deepwebide_be.chat.domain.ChatMessageReference;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,4 +18,13 @@ public class CodeReferenceResponse {
 
     @Schema(description = "라인 번호", nullable = true)
     private final Integer line;
+
+    public static CodeReferenceResponse from(ChatMessageReference ref) {
+        return CodeReferenceResponse.builder()
+                .referenceId(ref.getId())
+                .filePath(ref.getFilePath())
+                .line(ref.getLineNumber())
+                .build();
+    }
+
 }
