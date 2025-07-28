@@ -20,4 +20,9 @@ public class FileContent {
     @Lob
     @Column(nullable = false)
     private byte[] content;
+
+    // 내용 변경용 커스텀 메서드
+    public void updateContent(byte[] newContent) {
+        this.content = newContent;
+    }
 }
