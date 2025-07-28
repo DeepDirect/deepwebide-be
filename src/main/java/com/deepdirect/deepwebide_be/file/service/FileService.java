@@ -18,11 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -34,9 +30,10 @@ public class FileService {
 
     public List<FileTreeNodeResponse> getFileTree(Long repositoryId, Long userId) {
         // 1. 레포지토리/권한 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
-        // 2. 해당 레포의 모든 FileNode 조회 (1쿼리)
+
+        // 2. 모든 FileNode 조회 (1쿼리)
         List<FileNode> allNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
 
         // 3. id → FileTreeNodeResponse 변환 및 맵핑
@@ -66,31 +63,26 @@ public class FileService {
         return roots;
     }
 
-
     @Transactional
     public FileNodeResponse createFileOrFolder(Long repositoryId, Long userId, FileCreateRequest req) {
-        // 1. 권한/레포 체크
+        // 1. 레포 권한 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        // 2. 부모 폴더 체크
+        // 2. 부모 폴더 체크 (없으면 null)
         FileNode parent = null;
         String parentPath = "";
         if (req.getParentId() != null) {
-            parent = fileNodeRepository.findById(req.getParentId())
-                    .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+            parent = findFileNodeWithRepositoryCheck(repositoryId, req.getParentId());
             if (!parent.getFileType().equals(FileType.FOLDER)) {
                 throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
             }
             parentPath = parent.getPath();
         }
 
-        // 3. 중복 이름 체크 (동일 폴더 하위에 동일 이름, 파일/폴더 구분X)
+        // 3. 중복 이름 체크 (동일 폴더 하위에 동일 이름)
         if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
-                repositoryId,
-                req.getParentId(),
-                req.getFileName()
-        )) {
+                repositoryId, req.getParentId(), req.getFileName())) {
             throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
         }
 
@@ -128,28 +120,24 @@ public class FileService {
 
     @Transactional
     public FileRenameResponse renameFileOrFolder(Long repositoryId, Long fileId, Long userId, String newFileName) {
-        // 1. 레포지토리/권한 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        // 1. 권한/레포 체크
+        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 2. 파일/폴더 찾기
-        FileNode fileNode = fileNodeRepository.findById(fileId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
-
-        // 3. 같은 폴더 내에 동일 이름 존재 체크
+        // 2. 같은 폴더 내에 동일 이름 존재 체크
         Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
-        boolean isDuplicate = fileNodeRepository.existsByRepositoryIdAndParentIdAndName(repositoryId, parentId, newFileName);
-        if (isDuplicate) {
-            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
-        }
+        boolean isDuplicate = fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
+                repositoryId, parentId, newFileName);
+        if (isDuplicate) throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
 
-        // 4. 이름 변경 + 경로(path) 재계산
-        fileNode.rename(newFileName); // FileNode 엔티티에 rename 메소드(이름/path 수정) 필요
+        // 3. 이름 변경 + 경로(path) 재계산
+        fileNode.rename(newFileName);
 
-        // 5. 하위 모든 파일/폴더 경로(path)도 재귀적으로 수정 (폴더일 경우)
+        // 4. 하위 모든 파일/폴더 경로(path)도 재귀적으로 수정 (폴더일 경우)
         updateChildPathsRecursively(fileNode);
 
-        // 6. 결과 반환
+        // 5. 결과 반환
         return FileRenameResponse.builder()
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
@@ -169,25 +157,21 @@ public class FileService {
 
     @Transactional
     public void deleteFileOrFolder(Long repositoryId, Long fileId, Long userId) {
-        // 1. 권한/레포 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        FileNode node = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 2. 파일/폴더 존재 체크
-        FileNode node = fileNodeRepository.findById(fileId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
-
-        // 3. (폴더일 경우) 하위 전체 삭제 (재귀)
+        // (폴더일 경우) 하위 전체 삭제 (재귀)
         if (node.isFolder()) {
             deleteChildrenRecursively(node);
         }
 
-        // 4. 파일 내용 삭제 (FileType.FILE)
+        // 파일 내용 삭제 (FileType.FILE)
         if (node.getFileType() == FileType.FILE) {
             fileContentRepository.deleteByFileNode(node);
         }
 
-        // 5. 자기 자신 삭제
+        // 자기 자신 삭제
         fileNodeRepository.delete(node);
     }
 
@@ -208,43 +192,38 @@ public class FileService {
     @Transactional
     public FileNodeResponse moveFileOrFolder(
             Long repositoryId, Long fileId, Long userId, Long newParentId) {
-        // 1. 권한/레포 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 2. 이동 대상 파일/폴더 찾기
-        FileNode fileNode = fileNodeRepository.findById(fileId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
-
-        // 3. 새 부모 폴더 체크
+        // 새 부모 폴더 체크
         FileNode newParent = null;
         String newParentPath = "";
         if (newParentId != null) {
-            newParent = fileNodeRepository.findById(newParentId)
-                    .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+            newParent = findFileNodeWithRepositoryCheck(repositoryId, newParentId);
             if (!newParent.isFolder()) {
                 throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
             }
-            // 3-1. 순환구조 방지 (본인 또는 하위로 이동 불가)
+            // 순환구조 방지 (본인 또는 하위로 이동 불가)
             if (isDescendant(fileNode, newParent)) {
                 throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
             }
             newParentPath = newParent.getPath();
         }
 
-        // 4. 같은 폴더에 동일 이름 체크
+        // 같은 폴더에 동일 이름 체크
         if (fileNodeRepository.existsByRepositoryIdAndParentAndName(
                 repositoryId, newParent, fileNode.getName())) {
             throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
         }
 
-        // 5. parent 변경 & path 재계산
+        // parent 변경 & path 재계산
         fileNode.moveToParent(newParent, newParentPath);
 
-        // 6. 하위 경로 재귀 갱신 (폴더일 경우)
+        // 하위 경로 재귀 갱신 (폴더일 경우)
         updateChildPathsRecursively(fileNode);
 
-        // 7. 저장/응답
+        // 저장/응답
         return FileNodeResponse.builder()
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
@@ -266,24 +245,20 @@ public class FileService {
 
     @Transactional(readOnly = true)
     public FileContentResponse getFileContent(Long repositoryId, Long fileId, Long userId) {
-        // 1. 권한/레포 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+        FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 2. 파일 노드 조회
-        FileNode fileNode = fileNodeRepository.findById(fileId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
-
-        // 3. 폴더는 열 수 없음
+        // 폴더는 열 수 없음
         if (fileNode.getFileType() == FileType.FOLDER) {
             throw new GlobalException(ErrorCode.CANNOT_OPEN_FOLDER);
         }
 
-        // 4. 파일 내용 조회
+        // 파일 내용 조회
         FileContent fileContent = fileContentRepository.findByFileNode(fileNode)
                 .orElseThrow(() -> new GlobalException(ErrorCode.FILE_CONTENT_NOT_FOUND));
 
-        // 5. byte[] → String 변환 (기본 UTF-8, 파일별 인코딩은 필요에 따라 처리)
+        // byte[] → String 변환 (UTF-8)
         String content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
 
         return FileContentResponse.builder()
@@ -294,5 +269,13 @@ public class FileService {
                 .build();
     }
 
-
+    // 파일이 진짜 레포 소속인지 검증 ---
+    private FileNode findFileNodeWithRepositoryCheck(Long repositoryId, Long fileId) {
+        FileNode fileNode = fileNodeRepository.findById(fileId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.FILE_NOT_FOUND));
+        if (!fileNode.getRepository().getId().equals(repositoryId)) {
+            throw new GlobalException(ErrorCode.FILE_NOT_FOUND); // 또는 ACCESS_DENIED
+        }
+        return fileNode;
+    }
 }
