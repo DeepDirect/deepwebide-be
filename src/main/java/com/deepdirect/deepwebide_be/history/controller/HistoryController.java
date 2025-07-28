@@ -5,6 +5,7 @@ import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.history.dto.request.HistorySaveRequest;
 import com.deepdirect.deepwebide_be.history.dto.response.HistoryDetailResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistoryListResponse;
+import com.deepdirect.deepwebide_be.history.dto.response.HistoryRestoreResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistorySaveResponse;
 import com.deepdirect.deepwebide_be.history.service.HistoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,5 +55,16 @@ public class HistoryController {
     ) {
         List<HistoryListResponse> resp = historyService.getHistories(repositoryId, userDetails.getId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "히스토리 목록 조회 성공", resp));
+    }
+
+    @Operation(summary = "히스토리 복원(오너 전용)")
+    @PostMapping("/{repositoryId}/histories/{historyId}/restore")
+    public ResponseEntity<ApiResponseDto<HistoryRestoreResponse>> restoreHistory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @PathVariable Long historyId
+    ) {
+        HistoryRestoreResponse resp = historyService.restoreHistory(repositoryId, historyId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "히스토리 복원 완료. 현재 레포지토리 상태가 변경되었습니다. 다시 파일 트리를 조회하십시오.", resp));
     }
 }

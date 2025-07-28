@@ -12,6 +12,7 @@ import com.deepdirect.deepwebide_be.history.domain.HistoryFile;
 import com.deepdirect.deepwebide_be.history.dto.request.HistorySaveRequest;
 import com.deepdirect.deepwebide_be.history.dto.response.HistoryDetailResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistoryListResponse;
+import com.deepdirect.deepwebide_be.history.dto.response.HistoryRestoreResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistorySaveResponse;
 import com.deepdirect.deepwebide_be.history.repository.HistoryFileRepository;
 import com.deepdirect.deepwebide_be.history.repository.HistoryRepository;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -214,4 +216,81 @@ public class HistoryService {
                 })
                 .toList();
     }
+
+    @Transactional
+    public HistoryRestoreResponse restoreHistory(Long repositoryId, Long historyId, Long userId) {
+        // 1. 레포/오너 확인
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.getOwner().getId().equals(userId)) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        // 2. 해당 히스토리 및 파일 목록 조회
+        History history = historyRepository.findById(historyId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.HISTORY_NOT_FOUND));
+
+        if (!history.getRepository().getId().equals(repositoryId)) {
+            throw new GlobalException(ErrorCode.HISTORY_NOT_FOUND);
+        }
+
+        List<HistoryFile> historyFiles = historyFileRepository.findByHistory(history);
+
+        // 3. 기존 파일/폴더 모두 삭제 (안전하게 하위부터)
+        List<FileNode> dbNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
+        dbNodes.stream()
+                .sorted((a, b) -> b.getPath().length() - a.getPath().length())
+                .forEach(node -> {
+                    if (node.getFileType() == FileType.FILE) fileContentRepository.deleteByFileNode(node);
+                    fileNodeRepository.delete(node);
+                });
+
+        // 4. 히스토리 파일/폴더를 트리로 다시 생성 (parent-child 순서 보장)
+        Map<Long, FileNode> tempIdToNode = new HashMap<>();
+        // id → dto 맵
+        Map<Long, HistoryFile> idToDto = historyFiles.stream()
+                .collect(Collectors.toMap(HistoryFile::getFileId, f -> f));
+        // parent-child 순서로 재귀 복원
+        for (Long fileId : idToDto.keySet()) {
+            restoreNodeRecursive(fileId, idToDto, tempIdToNode, repo);
+        }
+
+        return HistoryRestoreResponse.builder()
+                .historyId(historyId)
+                .restoredAt(LocalDateTime.now().toString())
+                .build();
+    }
+
+    // 재귀 복원 함수
+    private void restoreNodeRecursive(Long fileId,
+                                      Map<Long, HistoryFile> idToDto,
+                                      Map<Long, FileNode> idToNode,
+                                      Repository repo) {
+        if (idToNode.containsKey(fileId)) return;
+        HistoryFile dto = idToDto.get(fileId);
+        FileNode parent = null;
+        if (dto.getParentId() != null) {
+            restoreNodeRecursive(dto.getParentId(), idToDto, idToNode, repo);
+            parent = idToNode.get(dto.getParentId());
+        }
+        FileNode fileNode = FileNode.builder()
+                .repository(repo)
+                .name(dto.getFileName())
+                .fileType(FileType.valueOf(dto.getFileType()))
+                .parent(parent)
+                .path(dto.getPath())
+                .build();
+        fileNode = fileNodeRepository.save(fileNode);
+        idToNode.put(fileId, fileNode);
+
+        if ("FILE".equals(dto.getFileType())) {
+            FileContent content = FileContent.builder()
+                    .fileNode(fileNode)
+                    .content(dto.getContent() == null ? new byte[0] : dto.getContent().getBytes(StandardCharsets.UTF_8))
+                    .build();
+            fileContentRepository.save(content);
+        }
+    }
+
 }
