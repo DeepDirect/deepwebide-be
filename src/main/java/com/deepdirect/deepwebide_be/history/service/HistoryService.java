@@ -38,6 +38,16 @@ public class HistoryService {
 
     @Transactional
     public HistorySaveResponse saveHistory(Long repositoryId, Long userId, HistorySaveRequest request) {
+
+        for (HistorySaveRequest.NodeDto dto : request.getNodes()) {
+            System.out.println(
+                    "fileId=" + dto.getFileId() +
+                            ", fileName=" + dto.getFileName() +
+                            ", parentId=" + dto.getParentId() +
+                            ", path=" + dto.getPath()
+            );
+        }
+
         // 1. 권한 체크 및 레포 조회
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -62,63 +72,20 @@ public class HistoryService {
             fileNodeRepository.delete(node);
         }
 
-        // 5. id → FileNode 캐싱 (성능/트리 부모-자식 연결 위해)
+        // 5. id → FileNode (DB에 이미 있던 것만)
         Map<Long, FileNode> idToNode = dbNodes.stream()
                 .collect(Collectors.toMap(FileNode::getId, n -> n));
 
-        // 6. 요청 기반 파일/폴더 추가 or 수정(이름/경로/내용)
-        for (HistorySaveRequest.NodeDto dto : request.getNodes()) {
-            FileNode fileNode = idToNode.get(dto.getFileId());
-            FileNode parent = (dto.getParentId() == null) ? null : idToNode.get(dto.getParentId());
+        // 6. id → 요청 NodeDto
+        Map<Long, HistorySaveRequest.NodeDto> idToDto = request.getNodes().stream()
+                .collect(Collectors.toMap(HistorySaveRequest.NodeDto::getFileId, n -> n));
 
-            if (fileNode == null) {
-                // **신규 파일/폴더**
-                fileNode = FileNode.builder()
-                        .repository(repo)
-                        .name(dto.getFileName())
-                        .fileType(FileType.valueOf(dto.getFileType()))
-                        .parent(parent)
-                        .path(dto.getPath())
-                        .build();
-                fileNode = fileNodeRepository.save(fileNode);
-                idToNode.put(fileNode.getId(), fileNode); // ★ map에 추가
-
-                if (fileNode.getFileType() == FileType.FILE) {
-                    FileContent content = FileContent.builder()
-                            .fileNode(fileNode)
-                            .content(dto.getContent() == null ? new byte[0] : dto.getContent().getBytes(StandardCharsets.UTF_8))
-                            .build();
-                    fileContentRepository.save(content);
-                }
-            } else {
-                // **기존 파일/폴더 - 이름/경로/부모 변경**
-                boolean updated = false;
-                if (!fileNode.getName().equals(dto.getFileName())) {
-                    fileNode.rename(dto.getFileName());
-                    updated = true;
-                }
-                if (parent != fileNode.getParent()) {
-                    fileNode.moveToParent(parent, parent == null ? "" : parent.getPath());
-                    updated = true;
-                }
-                if (!fileNode.getPath().equals(dto.getPath())) {
-                    fileNode.updatePath(dto.getPath());
-                    updated = true;
-                }
-                // **파일 내용 변경**
-                if (fileNode.getFileType() == FileType.FILE && dto.getContent() != null) {
-                    FileContent fileContent = fileContentRepository.findByFileNode(fileNode)
-                            .orElseThrow(() -> new GlobalException(ErrorCode.FILE_CONTENT_NOT_FOUND));
-                    String currentContent = new String(fileContent.getContent(), StandardCharsets.UTF_8);
-                    if (!currentContent.equals(dto.getContent())) {
-                        fileContent.updateContent(dto.getContent().getBytes(StandardCharsets.UTF_8));
-                    }
-                }
-                // (필요시 fileNodeRepository.save(fileNode);는 생략 가능, JPA dirty checking)
-            }
+        // 7. parent → 자식 순서로 재귀 저장
+        for (Long nodeId : idToDto.keySet()) {
+            saveNodeRecursive(nodeId, idToNode, idToDto, repo);
         }
 
-        // 7. History & HistoryFile 기록 (스냅샷처럼)
+        // 8. History & HistoryFile 기록 (스냅샷처럼)
         History history = History.builder()
                 .repository(repo)
                 .message(request.getMessage())
@@ -144,5 +111,43 @@ public class HistoryService {
         return HistorySaveResponse.builder()
                 .historyId(history.getId())
                 .build();
+    }
+
+    private void saveNodeRecursive(
+            Long clientFileId,
+            Map<Long, FileNode> idToNode,
+            Map<Long, HistorySaveRequest.NodeDto> idToDto,
+            Repository repo
+    ) {
+        // 이미 저장된 노드는 무시
+        if (idToNode.containsKey(clientFileId)) return;
+
+        HistorySaveRequest.NodeDto dto = idToDto.get(clientFileId);
+
+        FileNode parent = null;
+        if (dto.getParentId() != null) {
+            saveNodeRecursive(dto.getParentId(), idToNode, idToDto, repo);
+            parent = idToNode.get(dto.getParentId());
+        }
+
+        FileNode fileNode = FileNode.builder()
+                .repository(repo)
+                .name(dto.getFileName())
+                .fileType(FileType.valueOf(dto.getFileType()))
+                .parent(parent)
+                .path(dto.getPath())
+                .build();
+        fileNode = fileNodeRepository.save(fileNode);
+
+        // 🔥 여기서 클라이언트 fileId로 map에 추가!
+        idToNode.put(clientFileId, fileNode);
+
+        if (fileNode.getFileType() == FileType.FILE) {
+            FileContent content = FileContent.builder()
+                    .fileNode(fileNode)
+                    .content(dto.getContent() == null ? new byte[0] : dto.getContent().getBytes(StandardCharsets.UTF_8))
+                    .build();
+            fileContentRepository.save(content);
+        }
     }
 }
