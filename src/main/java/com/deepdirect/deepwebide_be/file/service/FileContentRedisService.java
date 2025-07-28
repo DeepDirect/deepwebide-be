@@ -10,8 +10,11 @@ public class FileContentRedisService {
     private final RedisTemplate<String, String> redisTemplate;
 
     public void saveFileContent(Long repositoryId, Long fileId, String content) {
-        String key = getFileContentKey(repositoryId, fileId);
-        redisTemplate.opsForValue().set(key, content);
+        String fileKey = "file:" + repositoryId + ":" + fileId;
+        // 1. 파일 내용 Redis에 저장
+        redisTemplate.opsForValue().set(fileKey, content);
+        // 2. dirty set에 등록
+        redisTemplate.opsForSet().add("dirty:files", fileKey);
     }
 
     public String getFileContent(Long repositoryId, Long fileId) {
