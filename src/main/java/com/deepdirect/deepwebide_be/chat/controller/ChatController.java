@@ -28,7 +28,10 @@ public class ChatController {
     ) {
         Long userId = userDetails.getId();
         ChatMessagesResponse response = chatMessageService.getMessages(repositoryId, userId, before, after, size);
-        return ResponseEntity.ok(ApiResponseDto.of(200, "채팅 메시지 조회에 성공했습니다.", response));
+        String message = (before != null)
+                ? "과거 채팅 메시지 조회에 성공했습니다."
+                : "채팅 메시지 조회에 성공했습니다.";
+        return ResponseEntity.ok(ApiResponseDto.of(200, message, response));
     }
 
 }
