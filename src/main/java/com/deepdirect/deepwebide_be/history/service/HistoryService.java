@@ -11,9 +11,12 @@ import com.deepdirect.deepwebide_be.history.domain.History;
 import com.deepdirect.deepwebide_be.history.domain.HistoryFile;
 import com.deepdirect.deepwebide_be.history.dto.request.HistorySaveRequest;
 import com.deepdirect.deepwebide_be.history.dto.response.HistoryDetailResponse;
+import com.deepdirect.deepwebide_be.history.dto.response.HistoryListResponse;
 import com.deepdirect.deepwebide_be.history.dto.response.HistorySaveResponse;
 import com.deepdirect.deepwebide_be.history.repository.HistoryFileRepository;
 import com.deepdirect.deepwebide_be.history.repository.HistoryRepository;
+import com.deepdirect.deepwebide_be.member.domain.User;
+import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,7 @@ public class HistoryService {
     private final HistoryFileRepository historyFileRepository;
     private final FileNodeRepository fileNodeRepository;
     private final FileContentRepository fileContentRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public HistorySaveResponse saveHistory(Long repositoryId, Long userId, HistorySaveRequest request) {
@@ -182,5 +186,32 @@ public class HistoryService {
                 .createdAt(history.getCreatedAt().toString())
                 .files(fileDtos)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<HistoryListResponse> getHistories(Long repositoryId, Long userId) {
+        // 1. 권한 체크 & 레포 확인
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 히스토리 목록(최신순) 조회
+        List<History> histories = historyRepository.findByRepositoryOrderByCreatedAtDesc(repo);
+
+        // 3. 변환
+        return histories.stream()
+                .map(history -> {
+                    // 작성자 정보 조회 (예시: authorId → User 엔티티 조회, 닉네임 등)
+                    User user = userRepository.findById(history.getAuthorId()).orElse(null);
+                    return HistoryListResponse.builder()
+                            .historyId(history.getId())
+                            .message(history.getMessage())
+                            .createdAt(history.getCreatedAt().toString())
+                            .createdBy(HistoryListResponse.CreatedByDto.builder()
+                                    .userId(history.getAuthorId())
+                                    .nickname(user != null ? user.getNickname() : "알 수 없음")
+                                    .build())
+                            .build();
+                })
+                .toList();
     }
 }
