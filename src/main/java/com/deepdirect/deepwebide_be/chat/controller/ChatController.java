@@ -21,12 +21,13 @@ public class ChatController {
     @GetMapping("/messages")
     public ResponseEntity<ApiResponseDto<ChatMessagesResponse>> getMessages(
             @PathVariable Long repositoryId,
+            @RequestParam(required = false) Long before,
             @RequestParam(required = false) Long after,
             @RequestParam(defaultValue = "20") Integer size,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = userDetails.getId();
-        ChatMessagesResponse response = chatMessageService.getMessages(repositoryId, userId, after, size);
+        ChatMessagesResponse response = chatMessageService.getMessages(repositoryId, userId, before, after, size);
         return ResponseEntity.ok(ApiResponseDto.of(200, "채팅 메시지 조회에 성공했습니다.", response));
     }
 

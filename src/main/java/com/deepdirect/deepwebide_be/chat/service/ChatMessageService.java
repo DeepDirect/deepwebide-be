@@ -15,14 +15,11 @@ import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,7 +32,7 @@ public class ChatMessageService {
     private final ChatMessageReferenceRepository referenceRepository;
 
     @Transactional(readOnly = true)
-    public ChatMessagesResponse getMessages(Long repositoryId, Long userId, Long after, Integer size) {
+    public ChatMessagesResponse getMessages(Long repositoryId, Long userId, Long before, Long after, Integer size) {
         // 레포 존재 확인
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -54,9 +51,15 @@ public class ChatMessageService {
 
         // 채팅 메세지 조회
         Pageable pageable = PageRequest.of(0, size + 1);
-        List<ChatMessage> messages = (after == null)
-                ? chatMessageRepository.findByRepositoryIdOrderByIdDesc(repositoryId, pageable)
-                : chatMessageRepository.findByRepositoryIdAndIdGreaterThanOrderByIdAsc(repositoryId, after, pageable);
+        List<ChatMessage> messages;
+
+        if (before != null) {
+            messages = chatMessageRepository.findByRepositoryIdAndIdLessThanOrderByIdDesc(repositoryId, before, pageable);
+        } else if (after != null) {
+            messages = chatMessageRepository.findByRepositoryIdAndIdGreaterThanOrderByIdAsc(repositoryId, after, pageable);
+        } else {
+            messages = chatMessageRepository.findByRepositoryIdOrderByIdDesc(repositoryId, pageable);
+        }
 
         boolean hasMore = messages.size() > size;
         if (hasMore) {
