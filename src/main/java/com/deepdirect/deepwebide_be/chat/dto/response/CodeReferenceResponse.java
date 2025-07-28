@@ -14,7 +14,7 @@ public class CodeReferenceResponse {
     private final Long referenceId;
 
     @Schema(description = "파일 경로")
-    private final String filePath;
+    private final String path;
 
     @Schema(description = "라인 번호", nullable = true)
     private final Integer line;
@@ -22,7 +22,7 @@ public class CodeReferenceResponse {
     public static CodeReferenceResponse from(ChatMessageReference ref) {
         return CodeReferenceResponse.builder()
                 .referenceId(ref.getId())
-                .filePath(ref.getFilePath())
+                .path(ref.getPath())
                 .line(ref.getLineNumber())
                 .build();
     }
