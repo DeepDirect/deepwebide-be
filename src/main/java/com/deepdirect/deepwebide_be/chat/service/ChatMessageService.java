@@ -144,8 +144,8 @@ public class ChatMessageService {
                 .totalElements(total)
                 .messages(responses)
                 .build();
+    }
 
-      
     @Transactional(readOnly = true)
     public CodePathListResponse getCodePaths(Long repositoryId, Long userId) {
         Repository repository = repositoryRepository.findById(repositoryId)
@@ -177,4 +177,5 @@ public class ChatMessageService {
 
         return CodePathListResponse.builder().paths(paths).build();
     }
+
 }
