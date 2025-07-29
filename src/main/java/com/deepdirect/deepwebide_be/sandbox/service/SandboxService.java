@@ -1,30 +1,58 @@
 package com.deepdirect.deepwebide_be.sandbox.service;
 
+import com.deepdirect.deepwebide_be.sandbox.dto.request.SandboxExecutionRequest;
+import com.deepdirect.deepwebide_be.sandbox.dto.response.SandboxExecutionResponse;
+import com.deepdirect.deepwebide_be.sandbox.exception.SandboxException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SandboxService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    public String requestExecution(Map<String, Object> body) {
+    @Value("${sandbox.api.base-url:http://localhost:9090}")
+    private String sandboxBaseUrl;
+
+    public SandboxExecutionResponse requestExecution(SandboxExecutionRequest request) {
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<SandboxExecutionRequest> httpEntity = new HttpEntity<>(request, headers);
+
+            String url = sandboxBaseUrl + "/api/sandbox/run";
+            log.info("Requesting sandbox execution: {} with request: {}", url, request);
+
+            ResponseEntity<SandboxExecutionResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    httpEntity,
+                    SandboxExecutionResponse.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Sandbox execution completed successfully");
+                return response.getBody();
+            } else {
+                throw new SandboxException("Sandbox execution failed with status: " + response.getStatusCode());
+            }
+
+        } catch (RestClientException e) {
+            log.error("Failed to communicate with sandbox service", e);
+            throw new SandboxException("Sandbox service communication error", e);
+        }
+    }
+
+    private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                "http://localhost:9090/api/sandbox/run", request, String.class
-        );
-
-        return response.getBody();
+        headers.add("User-Agent", "DeepWebIDE-Backend");
+        return headers;
     }
 }
