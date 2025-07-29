@@ -26,6 +26,7 @@ public enum ErrorCode {
     CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST,"자기 자신은 강퇴할 수 없습니다."),
     OAUTH_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "OAuth 토큰 요청에 실패했습니다."),
     OAUTH_USER_INFO_ERROR(HttpStatus.BAD_REQUEST, "OAuth 사용자 정보를 가져올 수 없습니다."),
+    OAUTH_EMAIL_NOT_FOUND(HttpStatus.BAD_REQUEST, "GitHub에서 이메일 정보를 가져올 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
