@@ -311,19 +311,18 @@ public class RepositoryService {
 
     @Transactional(readOnly = true)
     public RepositorySettingResponse getRepositorySettings(Long repositoryId, Long userId) {
-
         Repository repository = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
         boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
-        boolean isShared = repository.isShared();
 
-        // 접근 권한 없으면 예외
-        if (!isOwner && !isMember && isShared) {
+        // 공유 여부와 무관하게 접근 권한 없는 경우 차단
+        if (!isOwner && !isMember) {
             throw new GlobalException(ErrorCode.FORBIDDEN);
         }
 
+        boolean isShared = repository.isShared();
         List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
 
         if (isShared) {
@@ -334,7 +333,7 @@ public class RepositoryService {
                         .userId(user.getId())
                         .nickname(user.getNickname())
                         .profileImageUrl(user.getProfileImageUrl())
-                        .role(member.getRole()) // "OWNER" or "MEMBER"
+                        .role(member.getRole())
                         .build());
             }
         }
