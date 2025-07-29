@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.chat.service;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessage;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessageReference;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageResponse;
+import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageSearchResponse;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessagesResponse;
 import com.deepdirect.deepwebide_be.chat.dto.response.CodeReferenceResponse;
 import com.deepdirect.deepwebide_be.chat.repository.ChatMessageReferenceRepository;
@@ -15,6 +16,7 @@ import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,5 +94,50 @@ public class ChatMessageService {
                 .toList();
 
         return ChatMessagesResponse.of(hasMore, responses);
+    }
+    @Transactional(readOnly = true)
+    public ChatMessageSearchResponse searchMessages(Long repositoryId, Long userId, String keyword, int size) {
+        if (keyword == null || keyword.isBlank()) {
+            throw new GlobalException(ErrorCode.INVALID_INPUT);
+        }
+
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.isShared() || (!repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                && !repo.getOwner().getId().equals(userId))) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Order.desc("sentAt"), Sort.Order.desc("id")));
+        List<ChatMessage> result = chatMessageRepository
+                .findByRepositoryIdAndMessageContainingIgnoreCase(repositoryId, keyword, pageable);
+
+        long total = chatMessageRepository.countByRepositoryIdAndMessageContainingIgnoreCase(repositoryId, keyword);
+
+        Map<Long, List<ChatMessageReference>> ref = referenceRepository
+                .findByChatMessageIdIn(result.stream().map(ChatMessage::getId).toList())
+                .stream().collect(Collectors.groupingBy(r -> r.getChatMessage().getId()));
+
+        List<ChatMessageResponse> responses = result.stream().map(msg ->
+                ChatMessageResponse.builder()
+                        .messageId(msg.getId())
+                        .senderId(msg.getSender().getId())
+                        .senderNickname(msg.getSender().getNickname())
+                        .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
+                        .message(msg.getMessage())
+                        .codeReferences(ref.getOrDefault(msg.getId(), List.of())
+                                .stream().map(CodeReferenceResponse::from)
+                                .toList())
+                        .isMine(msg.getSender().getId().equals(userId))
+                        .sentAt(msg.getSentAt())
+                        .build()
+        ).toList();
+
+        return ChatMessageSearchResponse.builder()
+                .keyword(keyword)
+                .totalElements(total)
+                .messages(responses)
+                .build();
     }
 }

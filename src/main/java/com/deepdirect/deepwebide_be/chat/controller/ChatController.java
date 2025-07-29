@@ -1,5 +1,6 @@
 package com.deepdirect.deepwebide_be.chat.controller;
 
+import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageSearchResponse;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessagesResponse;
 import com.deepdirect.deepwebide_be.chat.service.ChatMessageService;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
@@ -32,6 +33,18 @@ public class ChatController {
                 ? "과거 채팅 메시지 조회에 성공했습니다."
                 : "채팅 메시지 조회에 성공했습니다.";
         return ResponseEntity.ok(ApiResponseDto.of(200, message, response));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponseDto<ChatMessageSearchResponse>> search(
+            @PathVariable Long repositoryId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+
+        ChatMessageSearchResponse response = chatMessageService.searchMessages(repositoryId, userDetails.getId(), keyword, size);
+        return ResponseEntity.ok(ApiResponseDto.of(200,"채팅 메시지 검색 결과입니다.",response));
     }
 
 }
