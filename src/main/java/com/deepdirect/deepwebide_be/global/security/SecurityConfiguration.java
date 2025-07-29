@@ -88,7 +88,8 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/api/auth/**"),
                                 new AntPathRequestMatcher("/h2-console/**"),
                                 new AntPathRequestMatcher("/redis-test"),
-                                new AntPathRequestMatcher("/test/**") // Sentry 테스트용
+                                new AntPathRequestMatcher("/test/**"), // Sentry 테스트용
+                                new AntPathRequestMatcher("/ws/**")
                         ).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/signout")).authenticated()
                         .anyRequest().authenticated()

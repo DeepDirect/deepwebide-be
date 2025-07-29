@@ -20,8 +20,8 @@ public class ChatMessageReference {
     @JoinColumn(name = "chat_message_id", nullable = false)
     private ChatMessage chatMessage;
 
-    @Column(name = "file_path", nullable = false)
-    private String filePath;
+    @Column(name = "path", nullable = false)
+    private String path;
 
     @Column(name = "line_number")
     private Integer lineNumber;
