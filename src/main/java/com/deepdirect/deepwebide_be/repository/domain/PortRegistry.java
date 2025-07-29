@@ -24,5 +24,9 @@ public class PortRegistry {
     public void setRepository(Repository repository) {
         this.repository = repository;
     }
+
+    public Integer getPort() {
+        return this.port;
+    }
 }
 
