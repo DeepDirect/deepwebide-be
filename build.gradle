@@ -75,6 +75,9 @@ dependencies {
     implementation 'io.sentry:sentry-spring-boot-starter:8.17.0'
     implementation 'io.sentry:sentry-logback:8.17.0'
 
+    // Apache Commons IO (파일 처리 등 유틸리티)
+    implementation 'commons-io:commons-io:2.16.1'
+
     // 테스트 관련 라이브러리
     implementation 'org.springframework:spring-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
