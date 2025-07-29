@@ -24,6 +24,12 @@ public class RepositoryFavoriteService {
 
     @Transactional
     public FavoriteToggleResponse toggleFavorite(Long repositoryId, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         User user = getUserOrThrow(userId);
