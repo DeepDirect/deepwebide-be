@@ -89,10 +89,8 @@ public class UserService {
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         String nickname = generateUniqueNickname(NicknameGenerator.generate());
-
         String profileImageUrl = profileImageService.generateProfileImageUrl(nickname, 48);
 
-        // 이메일 인증
         String code = emailVerificationService.createVerification(request.getEmail());
         emailVerificationService.sendVerificationEmail(request.getEmail(), code);
 
@@ -123,89 +121,75 @@ public class UserService {
             throw new GlobalException(ErrorCode.WRONG_PASSWORD);
         }
 
-        // 1. 토큰 발급 (AccessToken, RefreshToken)
         String accessToken = jwtTokenProvider.createToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // 2. 리프레시 토큰 Redis에 저장 (userId -> refreshToken)
         refreshTokenService.save(user.getId(), refreshToken);
 
-        // 3. 리프레시 토큰을 쿠키로 내려주기
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
         refreshCookie.setHttpOnly(true);
         refreshCookie.setPath("/");
         refreshCookie.setMaxAge(60 * 60 * 24 * 14); // 2주
-        refreshCookie.setSecure(false); // 실제 배포시 true(https) 권장!
+        refreshCookie.setSecure(true); // SameSite=None 사용 시 필수
         servletResponse.addCookie(refreshCookie);
 
-        // 4. 액세스 토큰만 응답 본문으로 전달
+        // SameSite=None 설정을 위한 Set-Cookie 헤더 추가
+        servletResponse.setHeader(
+                "Set-Cookie",
+                "refreshToken=" + refreshToken + "; HttpOnly; Secure; Path=/; Max-Age=" + (60 * 60 * 24 * 14) + "; SameSite=None"
+        );
+
+
         return new SignInResponse(accessToken, new SignInUserDto(user));
     }
 
     @Transactional
     public void signOut(String authorizationHeader, HttpServletResponse response) {
-        // 1. accessToken 추출 및 검증
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
         String accessToken = authorizationHeader.replace("Bearer ", "");
-        if (!jwtTokenProvider.validateToken(accessToken)) {
-            throw new GlobalException(ErrorCode.UNAUTHORIZED);
-        }
 
-        // 2. userId 추출
+        jwtTokenProvider.validateToken(accessToken); // 예외 방식으로 변경됨
+
         Long userId = jwtTokenProvider.getUserIdFromToken(accessToken);
-
-        // 3. Redis에서 refreshToken 삭제
         refreshTokenService.delete(userId);
 
-        // 4. 쿠키 만료 (refreshToken)
         Cookie cookie = new Cookie("refreshToken", null);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true); // 운영환경에서만 true, 개발은 false도 가능
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
 
-        // SameSite=Strict 명시적 추가
+        // SameSite=None 설정을 위한 Set-Cookie 헤더로 쿠키 삭제
         response.setHeader(
                 "Set-Cookie",
-                "refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+                "refreshToken=; HttpOnly; Secure; Path=/; Max-Age=0; SameSite=None"
         );
     }
 
-    // 타입 + 휴대폰번호 + 인증코드로 조회된 정보
     public PhoneVerification getVerification(AuthType authType, String phoneNumber, String phoneCode) {
-
         return verificationRepository
-                .findByPhoneNumberAndPhoneCodeAndAuthType(
-                        phoneNumber,
-                        phoneCode,
-                        authType
-                )
+                .findByPhoneNumberAndPhoneCodeAndAuthType(phoneNumber, phoneCode, authType)
                 .orElseThrow(() -> new GlobalException(ErrorCode.VERIFICATION_NOT_FOUND));
     }
 
     @Transactional
     public String findEmail(FindEmailRequest request) {
-
         AuthType authType = AuthType.FIND_ID;
 
-        PhoneVerification verification = getVerification(
-                authType, request.getPhoneNumber(), request.getPhoneCode()
-        );
+        PhoneVerification verification = getVerification(authType, request.getPhoneNumber(), request.getPhoneCode());
 
-        // 이미 인증되었는지 확인
         if (verification.isVerified()) {
             throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
         }
 
         User user = userRepository.findByUsernameAndPhoneNumber(
                 request.getUsername(), request.getPhoneNumber()
-            ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
         verification.verify();
-
         return user.getEmail();
     }
 
@@ -213,33 +197,25 @@ public class UserService {
         if (userRepository.existsByEmail(email)) {
             throw new GlobalException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
-
         return true;
     }
 
     @Transactional
     public String passwordVerifyUser(PasswordVerifyUserRequest request) {
-
-        // 인증코드 검증
         AuthType authType = AuthType.FIND_PASSWORD;
 
-        PhoneVerification verification = getVerification(
-                authType, request.getPhoneNumber(), request.getPhoneCode()
-        );
+        PhoneVerification verification = getVerification(authType, request.getPhoneNumber(), request.getPhoneCode());
 
         if (verification.isVerified()) {
             throw new GlobalException(ErrorCode.ALREADY_VERIFIED);
         }
 
-        // 사용자 검증
         userRepository.findByUsernameAndPhoneNumber(
                 request.getUsername(), request.getPhoneNumber()
         ).orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
-        // 인증확인 여부 변경
         verification.verify();
 
-        // reauth token 발급
         String reauthToken = jwtTokenProvider.createReauthenticateToken(
                 request.getUsername(),
                 request.getEmail(),
@@ -247,62 +223,47 @@ public class UserService {
                 request.getPhoneCode()
         );
 
-        // 토큰 저장
         reauthTokenService.save(request.getEmail(), reauthToken);
 
         return reauthToken;
     }
 
-    // 비밀번호 변경 검증
     @Transactional
     public void verifyAndResetPassword(PasswordResetRequest request, String authorizationHeader) {
         final AuthType authType = AuthType.FIND_PASSWORD;
 
-        // 1. Authorization 헤더 검증 및 토큰 추출
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
         String reauthToken = authorizationHeader.replace("Bearer ", "");
 
-        // 2. 토큰 유효성 검사
-        if (!jwtTokenProvider.validateToken(reauthToken)) {
-            throw new GlobalException(ErrorCode.UNAUTHORIZED);
-        }
+        jwtTokenProvider.validateToken(reauthToken); // 예외 방식으로 수정
 
-        // 3. 토큰에서 클레임 추출
         Claims claims = jwtTokenProvider.getClaims(reauthToken);
         String username = claims.get("username", String.class);
         String email = claims.get("email", String.class);
         String phoneNumber = claims.get("phoneNumber", String.class);
         String phoneCode = claims.get("phoneCode", String.class);
 
-        // 4. Redis에 저장된 토큰인지 확인
         if (!reauthTokenService.isValid(email, reauthToken, username, email, phoneNumber, phoneCode)) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 5. 인증 이력 확인
         PhoneVerification verification = getVerification(authType, phoneNumber, phoneCode);
         if (!verification.isVerified()) {
             throw new GlobalException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 6. 사용자 검증
         User user = userRepository.findByEmailAndUsername(email, username)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
-        // 7. 비밀번호 확인 일치 여부 확인
         if (!request.getNewPassword().equals(request.getPasswordCheck())) {
             throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
         }
 
-        // 8. 비밀번호 변경
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-
-        // 9. 재인증 토큰 제거
         reauthTokenService.delete(email);
     }
-
 }

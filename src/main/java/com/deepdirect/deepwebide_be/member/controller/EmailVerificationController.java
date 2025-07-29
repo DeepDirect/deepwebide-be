@@ -2,6 +2,7 @@ package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.member.service.EmailVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +11,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-@CrossOrigin(
-        origins = {
-                "http://localhost:5173",
-        },
-        allowCredentials = "true"
-)
+//@CrossOrigin(
+//        origins = {
+//                "http://localhost:5173",
+//                "https://www.deepdirect.site",
+//                "https://api.deepdirect.site"
+//        },
+//        allowCredentials = "true"
+//)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth/email")
+@Tag(name = "EmailVerification", description = "이메일 인증 관련 API")
 public class EmailVerificationController {
 
     private final EmailVerificationService emailVerificationService;

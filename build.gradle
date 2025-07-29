@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // @Valid, @NotBlank 등 Bean Validation 처리
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -68,6 +69,11 @@ dependencies {
 
     // DevTools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Sentry (에러 모니터링)
+    implementation 'io.sentry:sentry:8.17.0'
+    implementation 'io.sentry:sentry-spring-boot-starter:8.17.0'
+    implementation 'io.sentry:sentry-logback:8.17.0'
 
     // 테스트 관련 라이브러리
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

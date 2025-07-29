@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "repositories")
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "repositories")
 public class Repository {
 
     @Id

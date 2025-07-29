@@ -33,7 +33,13 @@ public class ReauthTokenService {
     public boolean isValid(String key, String token, String username, String email, String phoneNumber, String phoneCode) {
         String stored = find(key);
         if (stored == null || !stored.equals(token)) return false;
-        if (!jwtTokenProvider.validateToken(token)) return false;
+
+        // validateToken이 void이므로 예외 기반 처리
+        try {
+            jwtTokenProvider.validateToken(token);
+        } catch (Exception e) {
+            return false;
+        }
 
         Claims claims = jwtTokenProvider.getClaims(token);
 

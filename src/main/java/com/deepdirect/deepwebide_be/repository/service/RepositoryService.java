@@ -5,15 +5,11 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
-import com.deepdirect.deepwebide_be.repository.domain.Repository;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
+import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.repository.*;
 import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,11 +31,13 @@ public class RepositoryService {
     private final UserRepository userRepository;
     private final RepositoryEntryCodeRepository entryCodeRepository;
     private final RepositoryMemberRepository repositoryMemberRepository;
+    private final RepositoryFavoriteRepository repositoryFavoriteRepository;
+    private final RepositoryFileService repositoryFileService;
+    private final PortRegistryRepository portRegistryRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+        User owner = getUserOrThrow(ownerId);
 
         if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(request.getRepositoryName(), ownerId)) {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
@@ -52,27 +51,53 @@ public class RepositoryService {
 
         Repository savedRepository = repositoryRepository.save(repository);
 
+        PortRegistry availablePort = portRegistryRepository
+                .findFirstByStatusOrderByPortAsc(PortStatus.AVAILABLE)
+                .orElseThrow(() -> new GlobalException(
+                        ErrorCode.NO_AVAILABLE_PORT
+                ));
+        availablePort.setStatus(PortStatus.IN_USE);
+        availablePort.setRepository(savedRepository);
+        portRegistryRepository.save(availablePort);
+
+        RepositoryMember ownerMember = RepositoryMember.builder()
+                .repository(savedRepository)
+                .user(owner)
+                .role(RepositoryMemberRole.OWNER)
+                .build();
+        repositoryMemberRepository.save(ownerMember);
+
+        // **S3 템플릿 zip → 압축 해제 → DB 파일/폴더 구조 저장**
+        try {
+            repositoryFileService.initializeTemplateFiles(savedRepository);
+        } catch (Exception e) {
+            throw new GlobalException(ErrorCode.TEMPLATE_DOWNLOAD_FAILED);
+        }
+
         return RepositoryCreateResponse.builder()
                 .repositoryId(savedRepository.getId())
                 .repositoryName(savedRepository.getRepositoryName())
                 .ownerId(owner.getId())
-                .ownerName(owner.getUsername())
+                .ownerName(owner.getNickname())
                 .createdAt(savedRepository.getCreatedAt())
                 .build();
     }
 
-    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -83,19 +108,22 @@ public class RepositoryService {
                 .build();
     }
 
-    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+    public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
                         userId, RepositoryMemberRole.MEMBER, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -105,18 +133,22 @@ public class RepositoryService {
                 .repositories(sharedRepositoryDtos)
                 .build();
     }
-    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable) {
-        Pageable sortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        );
+
+    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable, Boolean liked) {
+        Pageable sortedPageable = getSortedPageable(pageable);
 
         Page<Repository> repositoryPage = repositoryRepository
-                .findByOwnerIdAndDeletedAtIsNull(userId, sortedPageable);
+                .findByOwnerIdAndIsSharedFalseAndDeletedAtIsNull(userId, sortedPageable);
 
-        List<RepositoryResponse> sharedRepositoryDtos = repositoryPage.stream()
-                .map(RepositoryResponse::from)
-                .collect(Collectors.toList());
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositoryPage.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositoryPage.getContent();
+
+        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
 
         return RepositoryListResponse.builder()
                 .currentPage(repositoryPage.getNumber())
@@ -126,9 +158,10 @@ public class RepositoryService {
                 .repositories(sharedRepositoryDtos)
                 .build();
     }
+
     @Transactional
     public RepositoryRenameResponse renameRepository(Long repoId, Long userId, RepositoryRenameRequest req) {
-        Repository repo = repositoryRepository.findById(repoId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repoId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -136,9 +169,6 @@ public class RepositoryService {
         }
 
         String newName = req.getRepositoryName();
-        if (newName.length() > 50) {
-            throw new GlobalException(ErrorCode.REPOSITORY_NAME_TOO_LONG);
-        }
         if (repositoryRepository.existsByRepositoryNameAndOwnerIdAndDeletedAtIsNull(newName, userId)) {
             throw new GlobalException(ErrorCode.REPOSITORY_NAME_ALREADY_EXISTS);
         }
@@ -150,14 +180,14 @@ public class RepositoryService {
                 .repositoryId(repo.getId())
                 .repositoryName(repo.getRepositoryName())
                 .ownerId(userId)
-                .ownerName(repo.getOwner().getUsername())
+                .ownerName(repo.getOwner().getNickname())
                 .createdAt(repo.getCreatedAt())
                 .updatedAt(repo.getUpdatedAt())
                 .build();
     }
     @Transactional
     public RepositoryResponse toggleShareStatus(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -172,7 +202,7 @@ public class RepositoryService {
         repo.updateSharedStatus(willShare);
 
         if (willShare) {
-            repo.setShareLink("https://webide.app/repositories" + repositoryId);
+            repo.setShareLink("https://www.deepdirect.site/" + repositoryId);
 
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresentOrElse(
                     entry -> {
@@ -190,16 +220,28 @@ public class RepositoryService {
                         entryCodeRepository.save(newCode);
                     }
             );
+
         } else {
+            // 공유 취소 시: 연결된 모든 멤버 soft delete (본인 제외)
+            repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId).stream()
+                    .filter(member -> !member.getUser().getId().equals(userId))
+                    .forEach(RepositoryMember::softDelete);
+
+            // 링크 및 엔트리코드 삭제
             repo.setShareLink(null);
             entryCodeRepository.deleteByRepositoryId(repositoryId);
         }
 
-        return RepositoryResponse.from(repo);
+        boolean isFavorite = repositoryFavoriteRepository
+                .findByUserAndRepository(userRepository.getReferenceById(userId), repo)
+                .isPresent();
+
+        return RepositoryResponse.from(repo, isFavorite);
     }
+
     @Transactional
     public void deleteRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -210,19 +252,24 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.CANNOT_DELETE_SHARED_REPOSITORY);
         }
 
+        repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                .ifPresent(RepositoryMember::softDelete);
+
         repo.softDelete();
     }
 
     @Transactional
     public void exitSharedRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(userId, repositoryId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(userId, repositoryId);
+
+        member.softDelete(); // 💡 논리 삭제 수행
 
         if (repo.isShared()) {
             entryCodeRepository.findByRepositoryId(repositoryId).ifPresent(entry -> {
@@ -236,7 +283,7 @@ public class RepositoryService {
 
     @Transactional
     public KickedMemberResponse kickMember(Long repositoryId, Long ownerId, Long memberId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(ownerId)) {
@@ -247,12 +294,11 @@ public class RepositoryService {
             throw new GlobalException(ErrorCode.CANNOT_KICK_SELF);
         }
 
-        if (!repositoryMemberRepository.existsByUserIdAndRepositoryId(memberId, repositoryId)) {
-            throw new GlobalException(ErrorCode.NOT_MEMBER);
-        }
+        RepositoryMember member = repositoryMemberRepository
+                .findByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, memberId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NOT_MEMBER));
 
-        repositoryMemberRepository.deleteByUserIdAndRepositoryId(memberId, repositoryId);
-
+        member.softDelete();
 
         RepositoryEntryCode entryCode = entryCodeRepository.findByRepositoryId(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.ENTRY_CODE_NOT_FOUND));
@@ -262,4 +308,69 @@ public class RepositoryService {
 
         return new KickedMemberResponse(memberId);
     }
+
+    @Transactional(readOnly = true)
+    public RepositorySettingResponse getRepositorySettings(Long repositoryId, Long userId) {
+
+        Repository repository = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean isOwner = repository.getOwner().getId().equals(userId);
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
+        boolean isShared = repository.isShared();
+
+        // 접근 권한 없으면 예외
+        if (!isOwner && !isMember && isShared) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
+
+        if (isShared) {
+            List<RepositoryMember> members = repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId);
+            for (RepositoryMember member : members) {
+                User user = member.getUser();
+                memberInfos.add(RepositorySettingResponse.MemberInfo.builder()
+                        .userId(user.getId())
+                        .nickname(user.getNickname())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .role(member.getRole()) // "OWNER" or "MEMBER"
+                        .build());
+            }
+        }
+
+        return RepositorySettingResponse.builder()
+                .repositoryId(repository.getId())
+                .repositoryName(repository.getRepositoryName())
+                .createdAt(repository.getCreatedAt())
+                .updatedAt(repository.getUpdatedAt())
+                .IsShared(isShared)
+                .shareLink(repository.getShareLink())
+                .members(memberInfos)
+                .build();
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private PageRequest getSortedPageable(Pageable pageable) {
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize()
+        );
+    }
+
+    private List<RepositoryResponse> convertToListRepo(Page<Repository> repositoryPage, Long userId) {
+        return repositoryPage.stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isFavoriteByUser(Repository repo, Long userId) {
+        return repo.getFavorites().stream()
+                .anyMatch(fav -> fav.getUser().getId().equals(userId));
+    }
 }
+

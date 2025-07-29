@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryEntryCodeR
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryJoinResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryEntryCodeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,12 +21,15 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
+@Tag(name = "EntryCode", description = "레포지토리 입장 코드 관련 API")
 public class RepositoryEntryCodeController {
 
     private final RepositoryEntryCodeService entryCodeService;
 
-    @GetMapping("/api/repositories/{repositoryId}")
-    @Operation(summary = "레포지토리 입장 권한 확인", description = "레포지토리에 접근 가능한지 확인합니다.")
+    @GetMapping("/{repositoryId}")
+    @Operation(summary = "레포지토리 입장 권한 확인",
+            description = "공유 링크로 접근한 사용자가 해당 레포지토리에 입장 가능한지 확인합니다.\n 소유자/멤버 여부에 따라 접근 권한을 판단하며,\n true인 경우 레포지토리 바로 입장, false인 경우 입장 코드 입력 페이지로 이동합니다."
+    )
     public ResponseEntity<ApiResponseDto<RepositoryAccessCheckResponse>> checkAccessToRepository(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -37,7 +41,7 @@ public class RepositoryEntryCodeController {
 
 
     @GetMapping("/{repositoryId}/entrycode")
-    @Operation(summary = "입장 코드 확인", description = "공유된 레포지토리의 입장 코드를 오너가 확인합니다.")
+    @Operation(summary = "입장 코드 확인", description = "레포지토리의 소유자가 공유 상태일 때 입장 코드를 확인합니다. 만료 되었을 경우 재발급 됩니다.")
     public ResponseEntity<ApiResponseDto<RepositoryEntryCodeResponse>> getEntryCode(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -47,6 +51,7 @@ public class RepositoryEntryCodeController {
     }
 
     @PostMapping("/{repositoryId}/new-entrycode")
+    @Operation(summary = "입장 코드 재발급", description = "공유된 레포지토리의 소유자가 기존 입장 코드를 폐기하고 새로 발급받습니다.")
     public ResponseEntity<ApiResponseDto<Map<String, String>>> regenerateEntryCode(
             @PathVariable Long repositoryId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -61,7 +66,7 @@ public class RepositoryEntryCodeController {
         );
     }
 
-    @PostMapping("/{repositoryId}/entryCode")
+    @PostMapping("/{repositoryId}/entrycode")
     @Operation(summary = "입장 코드 검증 및 레포 참여", description = "공유된 레포지토리에 입장 코드를 통해 사용자를 참여자로 등록합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryJoinResponse>> verifyEntryCodeAndJoin(
             @PathVariable Long repositoryId,

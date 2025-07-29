@@ -1,0 +1,59 @@
+name: Deploy to EC2 with Docker
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: |
+      github.event.pull_request.merged == true &&
+      github.head_ref == 'develop' &&
+      contains(github.event.pull_request.title, '[Deploy]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build Spring Boot JAR
+        run: ./gradlew clean build -x test
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          source: "build/libs/*-SNAPSHOT.jar"
+          target: "~/app"
+
+      - name: Remote Deploy via deploy.sh
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            export SPRING_REDIS_HOST="${{ secrets.SPRING_REDIS_HOST }}"
+            export SPRING_REDIS_PORT="${{ secrets.SPRING_REDIS_PORT }}"
+            export SPRING_REDIS_PASSWORD="${{ secrets.SPRING_REDIS_PASSWORD }}"
+            export SPRING_DATASOURCE_USERNAME="${{ secrets.SPRING_DATASOURCE_USERNAME }}"
+            export SPRING_DATASOURCE_PASSWORD="${{ secrets.SPRING_DATASOURCE_PASSWORD }}"
+            export SPRING_MAIL_PASSWORD="${{ secrets.SPRING_MAIL_PASSWORD }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export AWS_ACCESS_KEY="${{ secrets.AWS_ACCESS_KEY }}"
+            export AWS_SECRET_KEY="${{ secrets.AWS_SECRET_KEY }}"
+            export COOLSMS_KEY="${{ secrets.COOLSMS_KEY }}"
+            export COOLSMS_SECRET="${{ secrets.COOLSMS_SECRET }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
+            
+            cd ~/app
+            bash deploy.sh

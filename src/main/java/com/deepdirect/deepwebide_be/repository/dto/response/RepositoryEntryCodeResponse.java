@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-@Schema(description = "레포 입장 코드 응답")
+@Schema(description = "레포 입장 코드 응답 DTO")
 public class RepositoryEntryCodeResponse {
 
     @Schema(description = "레포지토리 고유 Id")
@@ -24,7 +24,7 @@ public class RepositoryEntryCodeResponse {
     private String ownerName;
 
     @Schema(description = "공유 여부", example = "true")
-    private boolean isShared;
+    private boolean IsShared;
 
     @Schema(description = "공유 링크", example = "https://webide.app/repository1")
     private String shareLink;
