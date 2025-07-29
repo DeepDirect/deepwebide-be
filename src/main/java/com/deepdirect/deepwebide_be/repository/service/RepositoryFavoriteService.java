@@ -13,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class RepositoryFavoriteService {
@@ -24,6 +22,12 @@ public class RepositoryFavoriteService {
 
     @Transactional
     public FavoriteToggleResponse toggleFavorite(Long repositoryId, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         User user = getUserOrThrow(userId);
