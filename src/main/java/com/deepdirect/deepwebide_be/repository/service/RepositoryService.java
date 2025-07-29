@@ -56,8 +56,7 @@ public class RepositoryService {
                 .orElseThrow(() -> new GlobalException(
                         ErrorCode.NO_AVAILABLE_PORT
                 ));
-        availablePort.setStatus(PortStatus.IN_USE);
-        availablePort.setRepository(savedRepository);
+        availablePort.assignToRepository(savedRepository);
         portRegistryRepository.save(availablePort);
 
         RepositoryMember ownerMember = RepositoryMember.builder()
