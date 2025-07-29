@@ -41,6 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             uri.startsWith("/webjars") ||
                             uri.startsWith("/h2-console") ||
                             uri.startsWith("/test") ||
+                            uri.startsWith("/login/oauth2") ||
+                            uri.startsWith("/oauth2") ||
 
                             // 정확하게 허용할 /api/auth 경로만 명시
                             uri.equals("/api/auth/signin") ||
