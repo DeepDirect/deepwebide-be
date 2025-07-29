@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.global.exception;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.sandbox.exception.SandboxException;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import io.sentry.protocol.SentryId;
@@ -73,6 +74,13 @@ public class GlobalExceptionHandler {
                 "서버 내부 오류가 발생했습니다.";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponseDto.error(500, responseMessage));
+    }
+
+    @ExceptionHandler(SandboxException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleSandboxException(SandboxException e) {
+        log.error("Sandbox execution error", e);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponseDto.of(503, "코드 실행 서비스가 일시적으로 사용할 수 없습니다.", null));
     }
 
     /** Sentry에 예외 정보 전송 */
