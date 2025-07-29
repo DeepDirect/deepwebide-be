@@ -6,11 +6,10 @@ import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.global.security.RefreshTokenService;
 import com.deepdirect.deepwebide_be.member.domain.OauthAccount;
 import com.deepdirect.deepwebide_be.member.domain.User;
-import com.deepdirect.deepwebide_be.member.dto.request.SignInRequest;
+import com.deepdirect.deepwebide_be.member.dto.response.GithubEmailResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.GithubUserResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInResponse;
 import com.deepdirect.deepwebide_be.member.dto.response.SignInUserDto;
-import com.deepdirect.deepwebide_be.member.dto.response.TokenResponse;
 import com.deepdirect.deepwebide_be.member.repository.OauthAccountRepository;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.member.util.NicknameGenerator;
@@ -18,23 +17,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-
 public class OAuthService {
     private final UserRepository userRepository;
     private final OauthAccountRepository oauthAccountRepository;
@@ -42,7 +41,6 @@ public class OAuthService {
     private final RefreshTokenService refreshTokenService;
     private final ProfileImageService profileImageService;
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
 
     @Value("${spring.security.oauth2.client.registration.github.client-id}")
     private String githubClientId;
@@ -60,6 +58,17 @@ public class OAuthService {
         String accessToken = getGitHubAccessToken(code);
 
         GithubUserResponse githubUser = getGitHubUserInfo(accessToken);
+
+        // 이메일이 null인 경우 별도 API로 가져오기
+        if (!StringUtils.hasText(githubUser.getEmail())) {
+            String email = getGitHubUserEmail(accessToken);
+            githubUser.setEmail(email);
+        }
+
+        // 이메일이 여전히 없으면 에러
+        if (!StringUtils.hasText(githubUser.getEmail())) {
+            throw new GlobalException(ErrorCode.OAUTH_EMAIL_NOT_FOUND);
+        }
 
         Optional<OauthAccount> existingOAuth = oauthAccountRepository.findByProviderAndProviderUserId("github", String.valueOf(githubUser.getId()));
 
@@ -97,6 +106,7 @@ public class OAuthService {
 
             return response.getBody().getAccessToken();
         } catch (Exception e) {
+            log.error("GitHub 액세스 토큰 요청 실패", e);
             throw new GlobalException(ErrorCode.OAUTH_TOKEN_ERROR);
         }
     }
@@ -119,7 +129,70 @@ public class OAuthService {
 
             return response.getBody();
         } catch (Exception e) {
+            log.error("GitHub 사용자 정보 요청 실패", e);
             throw new GlobalException(ErrorCode.OAUTH_USER_INFO_ERROR);
+        }
+    }
+
+    // 새로 추가된 메서드: GitHub 이메일 정보 가져오기
+    private String getGitHubUserEmail(String accessToken) {
+        String emailUrl = "https://api.github.com/user/emails";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+        headers.set("Accept", "application/vnd.github.v3+json");
+
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List<GithubEmailResponse>> response = restTemplate.exchange(
+                    emailUrl,
+                    HttpMethod.GET,
+                    request,
+                    new ParameterizedTypeReference<List<GithubEmailResponse>>() {}
+            );
+
+            if (response.getBody() == null || response.getBody().isEmpty()) {
+                log.warn("GitHub 이메일 정보를 가져올 수 없습니다.");
+                return null;
+            }
+
+            // 우선순위: primary이면서 verified인 이메일 > primary인 이메일 > verified인 이메일 > 첫 번째 이메일
+            List<GithubEmailResponse> emails = response.getBody();
+
+            // 1순위: primary이면서 verified
+            Optional<GithubEmailResponse> primaryVerified = emails.stream()
+                    .filter(email -> Boolean.TRUE.equals(email.getPrimary()) && Boolean.TRUE.equals(email.getVerified()))
+                    .findFirst();
+
+            if (primaryVerified.isPresent()) {
+                return primaryVerified.get().getEmail();
+            }
+
+            // 2순위: primary
+            Optional<GithubEmailResponse> primary = emails.stream()
+                    .filter(email -> Boolean.TRUE.equals(email.getPrimary()))
+                    .findFirst();
+
+            if (primary.isPresent()) {
+                return primary.get().getEmail();
+            }
+
+            // 3순위: verified
+            Optional<GithubEmailResponse> verified = emails.stream()
+                    .filter(email -> Boolean.TRUE.equals(email.getVerified()))
+                    .findFirst();
+
+            if (verified.isPresent()) {
+                return verified.get().getEmail();
+            }
+
+            // 4순위: 첫 번째 이메일
+            return emails.get(0).getEmail();
+
+        } catch (Exception e) {
+            log.error("GitHub 이메일 정보 요청 실패", e);
+            return null;
         }
     }
 
@@ -163,7 +236,7 @@ public class OAuthService {
     }
 
     @Transactional
-    public SignInResponse generateTokenResponse(User user,  HttpServletResponse servletResponse) {
+    public SignInResponse generateTokenResponse(User user, HttpServletResponse servletResponse) {
         String accessToken = jwtTokenProvider.createToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
@@ -182,12 +255,10 @@ public class OAuthService {
                 "refreshToken=" + refreshToken + "; HttpOnly; Secure; Path=/; Max-Age=" + (60 * 60 * 24 * 14) + "; SameSite=None"
         );
 
-
         return new SignInResponse(accessToken, new SignInUserDto(user));
     }
 
     private static class TokenResponse {
-
         @JsonProperty("access_token")
         private String access_token;
 
@@ -203,6 +274,5 @@ public class OAuthService {
         public void setTokenType(String token_type) { this.token_type = token_type; }
         public String getScope() { return scope; }
         public void setScope(String scope) { this.scope = scope; }
-
     }
 }
