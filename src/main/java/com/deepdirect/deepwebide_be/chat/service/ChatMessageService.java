@@ -95,6 +95,7 @@ public class ChatMessageService {
 
         return ChatMessagesResponse.of(hasMore, responses);
     }
+
     @Transactional(readOnly = true)
     public ChatMessageSearchResponse searchMessages(Long repositoryId, Long userId, String keyword, int size) {
         if (keyword == null || keyword.isBlank()) {
