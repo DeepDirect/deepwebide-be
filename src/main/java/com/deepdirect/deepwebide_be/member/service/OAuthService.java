@@ -14,6 +14,7 @@ import com.deepdirect.deepwebide_be.member.dto.response.TokenResponse;
 import com.deepdirect.deepwebide_be.member.repository.OauthAccountRepository;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
 import com.deepdirect.deepwebide_be.member.util.NicknameGenerator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -186,8 +187,14 @@ public class OAuthService {
     }
 
     private static class TokenResponse {
+
+        @JsonProperty("access_token")
         private String access_token;
+
+        @JsonProperty("token_type")
         private String token_type;
+
+        @JsonProperty("scope")
         private String scope;
 
         public String getAccessToken() { return access_token; }
