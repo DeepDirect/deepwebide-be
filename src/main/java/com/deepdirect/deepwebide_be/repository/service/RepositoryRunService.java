@@ -19,22 +19,19 @@ import com.deepdirect.deepwebide_be.sandbox.service.SandboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -50,6 +47,8 @@ public class RepositoryRunService {
     private final FileNodeRepository fileNodeRepository;
     private final FileContentRepository fileContentRepository;
     private final RunningContainerRepository runningContainerRepository;
+    private final String sandboxBaseUrl = "http://localhost:9090";
+    private final RestTemplate restTemplate;
 
     @Transactional
     public RepositoryExecuteResponse executeRepository(Long repositoryId, Long userId) {
@@ -430,5 +429,115 @@ public class RepositoryRunService {
                 log.warn("Failed to cleanup zip file: {}", zipPath, e);
             }
         }
+    }
+
+    /**
+     * 레포지토리 로그 조회
+     */
+    /**
+     * 레포지토리 로그 조회 (상태 자동 동기화)
+     */
+    public Map<String, Object> getRepositoryLogs(Long repositoryId, Long userId, int lines, String since) {
+        try {
+            log.info("Getting repository logs - repositoryId: {}, userId: {}", repositoryId, userId);
+
+            repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+            Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
+
+            if (containerOpt.isEmpty()) {
+                return createNoContainerResponse(repositoryId);
+            }
+
+            RunningContainer container = containerOpt.get();
+            log.info("Found container - uuid: {}, dbStatus: {}", container.getUuid(), container.getStatus());
+
+            String url = String.format("%s/api/sandbox/logs/%s?lines=%d&since=%s",
+                    sandboxBaseUrl, container.getUuid(), lines, since);
+
+            try {
+                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+
+                if (response != null) {
+                    String status = (String) response.get("status");
+
+                    // 컨테이너를 찾을 수 없는 경우 DB 상태 업데이트
+                    if ("CONTAINER_NOT_FOUND".equals(status)) {
+                        log.warn("Container {} not found, updating DB status", container.getUuid());
+
+                        // DB 상태 자동 동기화
+                        container.stop();
+                        runningContainerRepository.save(container);
+
+                        Map<String, Object> result = new HashMap<>(response);
+                        result.put("repositoryId", repositoryId);
+                        result.put("dbStatusUpdated", true);
+                        result.put("message", "컨테이너가 존재하지 않아 DB 상태를 업데이트했습니다.");
+                        result.put("containerInfo", createContainerInfo(container, "STOPPED"));
+
+                        return result;
+                    }
+
+                    // 정상 응답 처리
+                    Map<String, Object> result = new HashMap<>(response);
+                    result.put("repositoryId", repositoryId);
+                    result.put("requestedUrl", url);
+                    result.put("containerInfo", createContainerInfo(container, container.getStatus()));
+
+                    return result;
+                }
+
+                return createErrorResponse(repositoryId, "Empty response from sandbox server");
+
+            } catch (Exception httpEx) {
+                log.error("HTTP request failed - url: {}", url, httpEx);
+
+                // HTTP 오류 시에도 컨테이너 상태 확인
+                if (httpEx.getMessage().contains("404") || httpEx.getMessage().contains("Not Found")) {
+                    container.stop();
+                    runningContainerRepository.save(container);
+                }
+
+                return createErrorResponse(repositoryId, httpEx.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to get repository logs: {}", repositoryId, e);
+            return createErrorResponse(repositoryId, e.getMessage());
+        }
+    }
+
+    private Map<String, Object> createContainerInfo(RunningContainer container, String actualStatus) {
+        return Map.of(
+                "uuid", container.getUuid(),
+                "containerName", container.getContainerName(),
+                "port", container.getPort(),
+                "framework", container.getFramework(),
+                "createdAt", container.getCreatedAt(),
+                "dbStatus", actualStatus
+        );
+    }
+
+    private Map<String, Object> createNoContainerResponse(Long repositoryId) {
+        return Map.of(
+                "repositoryId", repositoryId,
+                "status", "NO_CONTAINER",
+                "message", "실행 중인 컨테이너 정보가 없습니다.",
+                "stdout", "",
+                "stderr", "",
+                "logs", ""
+        );
+    }
+
+    private Map<String, Object> createErrorResponse(Long repositoryId, String errorMessage) {
+        return Map.of(
+                "repositoryId", repositoryId,
+                "status", "ERROR",
+                "error", errorMessage,
+                "stdout", "",
+                "stderr", "",
+                "logs", ""
+        );
     }
 }

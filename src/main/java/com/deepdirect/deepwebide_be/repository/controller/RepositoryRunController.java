@@ -1,20 +1,28 @@
 package com.deepdirect.deepwebide_be.repository.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
+import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
+import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStopResponse;
+import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryRunService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.util.Map;
 
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/repositories")
@@ -22,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class RepositoryRunController {
 
     private final RepositoryRunService repositoryRunService;
+    private final RepositoryRepository repositoryRepository;
 
     @PostMapping("/{repositoryId}/execute")
     @Operation(summary = "레포지토리 실행", description = "레포지토리를 실행하고 실행 결과를 반환합니다.")
@@ -64,6 +73,20 @@ public class RepositoryRunController {
     ) {
         RepositoryStatusResponse status = repositoryRunService.getRepositoryStatus(repositoryId, userDetails.getId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 상태 조회 완료", status));
+    }
+
+    /**
+     * 레포지토리 실행 로그 조회
+     */
+    @GetMapping("/{repositoryId}/logs")
+    public ResponseEntity<ApiResponseDto<Map<String, Object>>> getRepositoryLogs(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @RequestParam(defaultValue = "50") int lines,
+            @RequestParam(defaultValue = "5m") String since) {
+
+        Map<String, Object> logs = repositoryRunService.getRepositoryLogs(repositoryId, userDetails.getId(), lines, since);
+        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 로그 조회 완료", logs));
     }
 }
 
