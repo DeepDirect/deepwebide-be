@@ -1,7 +1,6 @@
 package com.deepdirect.deepwebide_be.global.exception;
 
 import lombok.Getter;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.http.HttpStatus;
 
 @Getter
@@ -38,6 +37,10 @@ public enum ErrorCode {
     HISTORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 히스토리를 찾을 수 없습니다."),
     MISSING_WS_PARAMS(HttpStatus.BAD_REQUEST, "WebSocket 연결에 필요한 Param이 누락되었습니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST,"검색 키워드를 입력해주세요."),
+    REPOSITORY_EXECUTION_FAILED(HttpStatus.BAD_REQUEST, "레포지토리를 찾을 수 없습니다."),
+    UNSUPPORTED_REPOSITORY_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 레포지토리 타입입니다."),
+    REPOSITORY_FILES_NOT_FOUND(HttpStatus.BAD_REQUEST, "레포지토리 파일을 찾을 수 없습니다."),
+    FILE_TREE_CONVERSION_FAILED(HttpStatus.BAD_REQUEST, "파일 트리 변환에 실패했습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
@@ -57,6 +60,7 @@ public enum ErrorCode {
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 요청 기록이 없습니다."),
     REPOSITORY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않은 레포지토리 입니다."),
     ENTRY_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "입장 코드를 찾을 수 없습니다."),
+    CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅 메시지를 찾을 수 없습니다."),
 
 
     // 409 CONFLICT
