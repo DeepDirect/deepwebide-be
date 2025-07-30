@@ -5,6 +5,7 @@ import com.deepdirect.deepwebide_be.chat.service.ChatMessageService;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,10 +21,10 @@ public class ChatController {
     @Operation(summary = "채팅 메시지 조회", description = "레포지토리에 참여한 사용자가 채팅 메시지를 조회합니다.")
     @GetMapping("/messages")
     public ResponseEntity<ApiResponseDto<ChatMessagesResponse>> getMessages(
-            @PathVariable Long repositoryId,
-            @RequestParam(required = false) Long before,
-            @RequestParam(required = false) Long after,
-            @RequestParam(defaultValue = "20") Integer size,
+            @Parameter(description = "레포지토리 ID") @PathVariable Long repositoryId,
+            @Parameter(description = "이 메시지 ID 이전의 메시지를 조회") @RequestParam(required = false) Long before,
+            @Parameter(description = "이 메시지 ID 이후의 메시지를 조회") @RequestParam(required = false) Long after,
+            @Parameter(description = "조회할 메시지 개수", example = "20") @RequestParam(defaultValue = "20") Integer size,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = userDetails.getId();

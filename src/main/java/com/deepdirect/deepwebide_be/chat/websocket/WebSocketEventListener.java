@@ -45,7 +45,6 @@ public class WebSocketEventListener {
         chatSessionService.addSession(repositoryId, userId); // 이 안에서 메시지 발행됨
 
         long count = chatSessionService.getConnectedCount(repositoryId);
-        log.info("🟢 [CONNECT] 유저 {}가 레포 {} 채팅방에 입장 (현재 접속자: {})", userId, repositoryId, count);
     }
 
     @EventListener
@@ -64,6 +63,5 @@ public class WebSocketEventListener {
         chatSessionService.removeSession(repositoryId, userId); // 이 안에서 메시지 발행됨
 
         long count = chatSessionService.getConnectedCount(repositoryId);
-        log.info("🔴 [DISCONNECT] 유저 {}가 레포 {} 채팅방에서 퇴장 (현재 접속자: {})", userId, repositoryId, count);
     }
 }

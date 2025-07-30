@@ -27,8 +27,7 @@ public class ChatSessionService {
     public void addSession(Long repositoryId, Long userId) {
         String key = SESSION_KEY_PREFIX + repositoryId;
         redisTemplate.opsForSet().add(key, userId.toString());
-
-        long count = redisTemplate.opsForSet().size(key);
+        long connectedCount = redisTemplate.opsForSet().size(key);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
@@ -40,18 +39,17 @@ public class ChatSessionService {
                 userId,
                 user.getNickname(),
                 user.getProfileImageUrl(),
-                count
+                connectedCount
         );
 
         redisPublisher.publish(chatChannelSubscriptionManager.getTopic(repositoryId).getTopic(), message);
-        log.debug("👥 사용자 입장 처리 - userId: {}, count: {}", userId, count);
     }
 
     public void removeSession(Long repositoryId, Long userId) {
         String key = SESSION_KEY_PREFIX + repositoryId;
         redisTemplate.opsForSet().remove(key, userId.toString());
 
-        long count = redisTemplate.opsForSet().size(key);
+        long connectedCount = redisTemplate.opsForSet().size(key);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
@@ -60,11 +58,10 @@ public class ChatSessionService {
                 repositoryId,
                 userId,
                 user.getNickname(),
-                count
+                connectedCount
         );
 
         redisPublisher.publish(chatChannelSubscriptionManager.getChannelName(repositoryId), message);
-        log.debug("👤 사용자 퇴장 처리 - userId: {}, count: {}", userId, count);
     }
 
     public long getConnectedCount(Long repositoryId) {

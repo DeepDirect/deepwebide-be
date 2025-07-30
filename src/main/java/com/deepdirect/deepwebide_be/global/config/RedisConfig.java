@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
@@ -15,6 +16,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 public class RedisConfig {
 
     private final RedisConnectionFactory connectionFactory;
+    private final RedisSubscriber redisSubscriber;
 
     /**
      * Redis 메시지 리스너 컨테이너 Bean 등록
@@ -23,6 +25,7 @@ public class RedisConfig {
     public RedisMessageListenerContainer redisMessageListenerContainer() {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(redisSubscriber, new PatternTopic("chat:*"));
         return container;
     }
 

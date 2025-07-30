@@ -16,14 +16,11 @@ public class CodeReferenceResponse {
     @Schema(description = "파일 경로")
     private final String path;
 
-    @Schema(description = "라인 번호", nullable = true)
-    private final Integer line;
 
     public static CodeReferenceResponse from(ChatMessageReference ref) {
         return CodeReferenceResponse.builder()
                 .referenceId(ref.getId())
                 .path(ref.getPath())
-                .line(ref.getLineNumber())
                 .build();
     }
 

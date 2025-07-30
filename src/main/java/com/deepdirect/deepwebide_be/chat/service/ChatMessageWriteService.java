@@ -16,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 import static com.deepdirect.deepwebide_be.global.exception.ErrorCode.*;
 
 @Slf4j
@@ -33,7 +31,6 @@ public class ChatMessageWriteService {
 
     @Transactional
     public ChatMessageBroadcast saveChatMessage(Long userId, Long repositoryId, String content) {
-        // 1. 유효한 공유 레포인지 확인
         Repository repository = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(REPOSITORY_NOT_FOUND));
 
@@ -41,21 +38,17 @@ public class ChatMessageWriteService {
             throw new GlobalException(REPOSITORY_NOT_SHARED);
         }
 
-        // 2. 유저가 해당 레포의 멤버인지 확인 (soft delete 제외)
         if (!memberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)) {
             throw new GlobalException(NOT_MEMBER);
         }
 
-        // 3. 사용자 정보 조회
         User sender = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalException(USER_NOT_FOUND));
 
-        // 4. 메시지 저장
         ChatMessage chatMessage = chatMessageRepository.save(
                 ChatMessage.of(repository, sender, content)
         );
 
-        // 6. 응답 DTO로 변환
         return ChatMessageBroadcast.of(chatMessage, sender, repositoryId);
     }
 }

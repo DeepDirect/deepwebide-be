@@ -18,13 +18,12 @@ public class RedisChannelInitializer {
     private final ChatChannelSubscriptionManager chatChannelSubscriptionManager;
 
     @PostConstruct
-    public void init() {
+    public void subscribeSharedRepositories() {
         List<Repository> sharedRepos = repositoryRepository.findAllByIsSharedTrue();
 
         for (Repository repo : sharedRepos) {
             Long repositoryId = repo.getId();
             chatChannelSubscriptionManager.subscribe(repositoryId);
-            log.info("✅ 서버 시작 시 Redis 채널 구독: {}", chatChannelSubscriptionManager.getTopic(repositoryId));
         }
     }
 }

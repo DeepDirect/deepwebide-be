@@ -2,6 +2,7 @@ package com.deepdirect.deepwebide_be.chat.util;
 
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageBroadcast;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -22,13 +23,10 @@ public class RedisSubscriber implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            // 1. 메시지 바디를 JSON 문자열로 디코딩
             String raw = new String(message.getBody(), StandardCharsets.UTF_8);
-
-            // 2. JSON → DTO 변환
             ChatMessageBroadcast broadcast = objectMapper.readValue(raw, ChatMessageBroadcast.class);
 
-            // 3. isMine은 false로 변경 (다른 사람들에게 보내는 메시지)
+            // isMine은 false로 변경 (다른 사람들에게 보내는 메시지)
             ChatMessageBroadcast response = ChatMessageBroadcast.builder()
                     .type(broadcast.getType())
                     .messageId(broadcast.getMessageId())
@@ -40,16 +38,14 @@ public class RedisSubscriber implements MessageListener {
                     .isMine(false)
                     .build();
 
-            String topic = new String(message.getChannel(), StandardCharsets.UTF_8); // e.g. chatroom:5
+            String topic = new String(message.getChannel(), StandardCharsets.UTF_8);
             Long repositoryId = Long.parseLong(topic.split(":")[1]);
 
-            // 4. 구독 중인 사용자들에게 메시지 전송
+            // 구독 중인 사용자들에게 메시지 전송
             messagingTemplate.convertAndSend(
                     "/sub/repositories/" + repositoryId + "/chat",
                     response
             );
-
-            log.debug("📢 RedisSubscriber: 레포 {} 채팅 메시지 broadcast 완료", repositoryId);
         } catch (Exception e) {
             log.error("❌ RedisSubscriber: 메시지 처리 중 에러 발생", e);
         }

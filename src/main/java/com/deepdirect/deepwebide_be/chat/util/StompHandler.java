@@ -32,7 +32,6 @@ public class StompHandler implements ChannelInterceptor {
 
             Long userId = (Long) sessionAttributes.get("userId");
             if (userId == null) {
-                log.warn("❌ WebSocket 연결 거부: userId 없음");
                 throw new GlobalException(ErrorCode.UNAUTHORIZED);
             }
 
@@ -40,7 +39,6 @@ public class StompHandler implements ChannelInterceptor {
                     .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
             accessor.setUser(new CustomUserDetails(user));
-            log.debug("✅ STOMP 연결 성공: userId={}", userId);
         }
 
         return message;
