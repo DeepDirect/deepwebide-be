@@ -5,17 +5,11 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.member.repository.UserRepository;
-import com.deepdirect.deepwebide_be.repository.domain.Repository;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryEntryCode;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryMember;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
+import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
 import com.deepdirect.deepwebide_be.repository.dto.response.*;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryEntryCodeRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryFavoriteRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryMemberRepository;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.repository.*;
 import com.deepdirect.deepwebide_be.repository.util.EntryCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +33,8 @@ public class RepositoryService {
     private final RepositoryEntryCodeRepository entryCodeRepository;
     private final RepositoryMemberRepository repositoryMemberRepository;
     private final RepositoryFavoriteRepository repositoryFavoriteRepository;
+    private final RepositoryFileService repositoryFileService;
+    private final PortRegistryRepository portRegistryRepository;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -55,6 +52,15 @@ public class RepositoryService {
 
         Repository savedRepository = repositoryRepository.save(repository);
 
+        PortRegistry availablePort = portRegistryRepository
+                .findFirstByStatusOrderByPortAsc(PortStatus.AVAILABLE)
+                .orElseThrow(() -> new GlobalException(
+                        ErrorCode.NO_AVAILABLE_PORT
+                ));
+        availablePort.setStatus(PortStatus.IN_USE);
+        availablePort.setRepository(savedRepository);
+        portRegistryRepository.save(availablePort);
+
         RepositoryMember ownerMember = RepositoryMember.builder()
                 .repository(savedRepository)
                 .user(owner)
@@ -62,94 +68,125 @@ public class RepositoryService {
                 .build();
         repositoryMemberRepository.save(ownerMember);
 
+        // **S3 템플릿 zip → 압축 해제 → DB 파일/폴더 구조 저장**
+        try {
+            repositoryFileService.initializeTemplateFiles(savedRepository);
+        } catch (Exception e) {
+            throw new GlobalException(ErrorCode.TEMPLATE_DOWNLOAD_FAILED);
+        }
+
         return RepositoryCreateResponse.builder()
                 .repositoryId(savedRepository.getId())
                 .repositoryName(savedRepository.getRepositoryName())
                 .ownerId(owner.getId())
-                .ownerName(owner.getUsername())
+                .ownerName(owner.getNickname())
                 .createdAt(savedRepository.getCreatedAt())
                 .build();
     }
 
-    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
-        Pageable sortedPageable = getSortedPageable(pageable);
-
-        Page<Repository> repositoryPage = repositoryRepository
-                .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, sortedPageable);
+    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable, Boolean liked) {
+        List<Repository> repositories = repositoryRepository
+                .findByOwnerIdAndIsSharedFalseAndDeletedAtIsNull(userId, Pageable.unpaged())
+                .getContent();
 
         List<Repository> filtered = Boolean.TRUE.equals(liked)
-                ? repositoryPage.stream()
+                ? repositories.stream()
                 .filter(repo -> isFavoriteByUser(repo, userId))
                 .toList()
-                : repositoryPage.getContent();
+                : repositories;
 
-        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+        List<Repository> sorted = filtered.stream()
+                .sorted(Comparator.comparing(Repository::getUpdatedAt).reversed()
+                        .thenComparing(Repository::getRepositoryName))
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), sorted.size());
+        List<RepositoryResponse> pagedList = sorted.subList(start, end).stream()
                 .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
                 .toList();
 
+        int totalPages = (int) Math.ceil((double) sorted.size() / pageable.getPageSize());
+
         return RepositoryListResponse.builder()
-                .currentPage(repositoryPage.getNumber())
-                .pageSize(repositoryPage.getSize())
-                .totalPages(repositoryPage.getTotalPages())
-                .totalElements(repositoryPage.getTotalElements())
-                .repositories(sharedRepositoryDtos)
+                .currentPage(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPages(totalPages)
+                .totalElements(sorted.size())
+                .repositories(pagedList)
+                .build();
+    }
+
+    public RepositoryListResponse getSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
+        List<Repository> repositories = repositoryRepository
+                .findByIsSharedTrueAndDeletedAtIsNullAndOwnerId(userId, Pageable.unpaged())
+                .getContent();
+
+        List<Repository> filtered = Boolean.TRUE.equals(liked)
+                ? repositories.stream()
+                .filter(repo -> isFavoriteByUser(repo, userId))
+                .toList()
+                : repositories;
+
+        List<Repository> sorted = filtered.stream()
+                .sorted(Comparator.comparing(Repository::getUpdatedAt).reversed()
+                        .thenComparing(Repository::getRepositoryName))
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), sorted.size());
+        List<RepositoryResponse> pagedList = sorted.subList(start, end).stream()
+                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
+                .toList();
+
+        int totalPages = (int) Math.ceil((double) sorted.size() / pageable.getPageSize());
+
+        return RepositoryListResponse.builder()
+                .currentPage(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPages(totalPages)
+                .totalElements(sorted.size())
+                .repositories(pagedList)
                 .build();
     }
 
     public RepositoryListResponse getReceivedSharedRepositories(Long userId, Pageable pageable, Boolean liked) {
-        Pageable sortedPageable = getSortedPageable(pageable);
-
-        Page<Repository> repositoryPage = repositoryRepository
+        List<Repository> repositories = repositoryRepository
                 .findByMembersUserIdAndMembersRoleAndIsSharedTrueAndDeletedAtIsNullAndMembersDeletedAtIsNull(
-                        userId, RepositoryMemberRole.MEMBER, sortedPageable);
+                        userId, RepositoryMemberRole.MEMBER, Pageable.unpaged())
+                .getContent();
 
         List<Repository> filtered = Boolean.TRUE.equals(liked)
-                ? repositoryPage.stream()
+                ? repositories.stream()
                 .filter(repo -> isFavoriteByUser(repo, userId))
                 .toList()
-                : repositoryPage.getContent();
+                : repositories;
 
-        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
+        List<Repository> sorted = filtered.stream()
+                .sorted(Comparator.comparing(Repository::getUpdatedAt).reversed()
+                        .thenComparing(Repository::getRepositoryName))
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), sorted.size());
+        List<RepositoryResponse> pagedList = sorted.subList(start, end).stream()
                 .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
                 .toList();
 
-        return RepositoryListResponse.builder()
-                .currentPage(repositoryPage.getNumber())
-                .pageSize(repositoryPage.getSize())
-                .totalPages(repositoryPage.getTotalPages())
-                .totalElements(repositoryPage.getTotalElements())
-                .repositories(sharedRepositoryDtos)
-                .build();
-    }
-
-    public RepositoryListResponse getMyRepositories(Long userId, Pageable pageable, Boolean liked) {
-        Pageable sortedPageable = getSortedPageable(pageable);
-
-        Page<Repository> repositoryPage = repositoryRepository
-                .findByOwnerIdAndIsSharedFalseAndDeletedAtIsNull(userId, sortedPageable);
-
-        List<Repository> filtered = Boolean.TRUE.equals(liked)
-                ? repositoryPage.stream()
-                .filter(repo -> isFavoriteByUser(repo, userId))
-                .toList()
-                : repositoryPage.getContent();
-
-        List<RepositoryResponse> sharedRepositoryDtos = filtered.stream()
-                .map(repo -> RepositoryResponse.from(repo, isFavoriteByUser(repo, userId)))
-                .toList();
+        int totalPages = (int) Math.ceil((double) sorted.size() / pageable.getPageSize());
 
         return RepositoryListResponse.builder()
-                .currentPage(repositoryPage.getNumber())
-                .pageSize(repositoryPage.getSize())
-                .totalPages(repositoryPage.getTotalPages())
-                .totalElements(repositoryPage.getTotalElements())
-                .repositories(sharedRepositoryDtos)
+                .currentPage(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPages(totalPages)
+                .totalElements(sorted.size())
+                .repositories(pagedList)
                 .build();
     }
 
     @Transactional
     public RepositoryRenameResponse renameRepository(Long repoId, Long userId, RepositoryRenameRequest req) {
-        Repository repo = repositoryRepository.findById(repoId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repoId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -175,7 +212,7 @@ public class RepositoryService {
     }
     @Transactional
     public RepositoryResponse toggleShareStatus(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -229,7 +266,7 @@ public class RepositoryService {
 
     @Transactional
     public void deleteRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(userId)) {
@@ -249,7 +286,7 @@ public class RepositoryService {
 
     @Transactional
     public void exitSharedRepository(Long repositoryId, Long userId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         RepositoryMember member = repositoryMemberRepository
@@ -271,7 +308,7 @@ public class RepositoryService {
 
     @Transactional
     public KickedMemberResponse kickMember(Long repositoryId, Long ownerId, Long memberId) {
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         if (!repo.getOwner().getId().equals(ownerId)) {
@@ -299,19 +336,18 @@ public class RepositoryService {
 
     @Transactional(readOnly = true)
     public RepositorySettingResponse getRepositorySettings(Long repositoryId, Long userId) {
-
-        Repository repository = repositoryRepository.findById(repositoryId)
+        Repository repository = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
         boolean isOwner = repository.getOwner().getId().equals(userId);
         boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
-        boolean isShared = repository.isShared();
 
-        // 접근 권한 없으면 예외
-        if (!isOwner && !isMember && isShared) {
+        // 공유 여부와 무관하게 접근 권한 없는 경우 차단
+        if (!isOwner && !isMember) {
             throw new GlobalException(ErrorCode.FORBIDDEN);
         }
 
+        boolean isShared = repository.isShared();
         List<RepositorySettingResponse.MemberInfo> memberInfos = new ArrayList<>();
 
         if (isShared) {
@@ -322,7 +358,7 @@ public class RepositoryService {
                         .userId(user.getId())
                         .nickname(user.getNickname())
                         .profileImageUrl(user.getProfileImageUrl())
-                        .role(member.getRole()) // "OWNER" or "MEMBER"
+                        .role(member.getRole())
                         .build());
             }
         }

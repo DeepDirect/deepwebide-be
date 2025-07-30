@@ -34,6 +34,12 @@ public class RepositoryEntryCodeService {
 
     @Transactional(readOnly = true)
     public RepositoryAccessCheckResponse checkAccess(Long repositoryId, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repository = getRepositoryOrThrow(repositoryId);
 
         Optional<RepositoryMember> optionalMember =
@@ -52,6 +58,12 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public RepositoryJoinResponse verifyEntryCodeAndJoin(Long repositoryId, String entryCode, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repo = getRepositoryOrThrow(repositoryId);
 
         if (!repo.isShared()) {
@@ -95,6 +107,12 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public RepositoryEntryCodeResponse getEntryCode(Long repositoryId, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repo = getRepositoryOrThrow(repositoryId);
         validateOwnerOrThrow(repo, userId,ErrorCode.ENTRY_CODE_ACCESS_DENIED);
 
@@ -121,6 +139,12 @@ public class RepositoryEntryCodeService {
 
     @Transactional
     public String regenerateEntryCode(Long repositoryId, Long userId) {
+
+        if (repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId).isEmpty())
+        {
+            throw  new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND);
+        }
+
         Repository repo = getRepositoryOrThrow(repositoryId);
         validateOwnerOrThrow(repo, userId,ErrorCode.ENTRY_CODE_REISSUE_DENIED);
 

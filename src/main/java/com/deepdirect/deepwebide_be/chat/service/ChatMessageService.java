@@ -3,10 +3,14 @@ package com.deepdirect.deepwebide_be.chat.service;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessage;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessageReference;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageResponse;
+import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageSearchResponse;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessagesResponse;
+import com.deepdirect.deepwebide_be.chat.dto.response.CodePathListResponse;
 import com.deepdirect.deepwebide_be.chat.dto.response.CodeReferenceResponse;
 import com.deepdirect.deepwebide_be.chat.repository.ChatMessageReferenceRepository;
 import com.deepdirect.deepwebide_be.chat.repository.ChatMessageRepository;
+import com.deepdirect.deepwebide_be.file.domain.FileNode;
+import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
@@ -19,10 +23,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,9 +35,10 @@ public class ChatMessageService {
     private final RepositoryMemberRepository repositoryMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMessageReferenceRepository referenceRepository;
+    private final FileNodeRepository fileNodeRepository;
 
     @Transactional(readOnly = true)
-    public ChatMessagesResponse getMessages(Long repositoryId, Long userId, Long after, Integer size) {
+    public ChatMessagesResponse getMessages(Long repositoryId, Long userId, Long before, Long after, Integer size) {
         // 레포 존재 확인
         Repository repository = repositoryRepository.findById(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -54,9 +57,15 @@ public class ChatMessageService {
 
         // 채팅 메세지 조회
         Pageable pageable = PageRequest.of(0, size + 1);
-        List<ChatMessage> messages = (after == null)
-                ? chatMessageRepository.findByRepositoryIdOrderByIdDesc(repositoryId, pageable)
-                : chatMessageRepository.findByRepositoryIdAndIdGreaterThanOrderByIdAsc(repositoryId, after, pageable);
+        List<ChatMessage> messages;
+
+        if (before != null) {
+            messages = chatMessageRepository.findByRepositoryIdAndIdLessThanOrderByIdDesc(repositoryId, before, pageable);
+        } else if (after != null) {
+            messages = chatMessageRepository.findByRepositoryIdAndIdGreaterThanOrderByIdAsc(repositoryId, after, pageable);
+        } else {
+            messages = chatMessageRepository.findByRepositoryIdOrderByIdDesc(repositoryId, pageable);
+        }
 
         boolean hasMore = messages.size() > size;
         if (hasMore) {
@@ -90,4 +99,83 @@ public class ChatMessageService {
 
         return ChatMessagesResponse.of(hasMore, responses);
     }
+
+    @Transactional(readOnly = true)
+    public ChatMessageSearchResponse searchMessages(Long repositoryId, Long userId, String keyword, int size) {
+        if (keyword == null || keyword.isBlank()) {
+            throw new GlobalException(ErrorCode.INVALID_INPUT);
+        }
+
+        Repository repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repo.isShared() || (!repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId)
+                && !repo.getOwner().getId().equals(userId))) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Order.desc("sentAt"), Sort.Order.desc("id")));
+        List<ChatMessage> result = chatMessageRepository
+                .findByRepositoryIdAndMessageContainingIgnoreCase(repositoryId, keyword, pageable);
+
+        long total = chatMessageRepository.countByRepositoryIdAndMessageContainingIgnoreCase(repositoryId, keyword);
+
+        Map<Long, List<ChatMessageReference>> ref = referenceRepository
+                .findByChatMessageIdIn(result.stream().map(ChatMessage::getId).toList())
+                .stream().collect(Collectors.groupingBy(r -> r.getChatMessage().getId()));
+
+        List<ChatMessageResponse> responses = result.stream().map(msg ->
+                ChatMessageResponse.builder()
+                        .messageId(msg.getId())
+                        .senderId(msg.getSender().getId())
+                        .senderNickname(msg.getSender().getNickname())
+                        .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
+                        .message(msg.getMessage())
+                        .codeReferences(ref.getOrDefault(msg.getId(), List.of())
+                                .stream().map(CodeReferenceResponse::from)
+                                .toList())
+                        .isMine(msg.getSender().getId().equals(userId))
+                        .sentAt(msg.getSentAt())
+                        .build()
+        ).toList();
+
+        return ChatMessageSearchResponse.builder()
+                .keyword(keyword)
+                .totalElements(total)
+                .messages(responses)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public CodePathListResponse getCodePaths(Long repositoryId, Long userId) {
+        Repository repository = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        if (!repository.isShared()) {
+            throw new GlobalException(ErrorCode.REPOSITORY_NOT_SHARED);
+        }
+
+        boolean isOwner = repository.getOwner().getId().equals(userId);
+        boolean isMember = repositoryMemberRepository.existsByRepositoryIdAndUserIdAndDeletedAtIsNull(repositoryId, userId);
+        if (!isOwner && !isMember) {
+            throw new GlobalException(ErrorCode.FORBIDDEN);
+        }
+
+        List<FileNode> fileNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
+
+        List<String> paths = fileNodes.stream()
+                .map(FileNode::getPath)
+                .sorted((a, b) -> {
+                    // 폴더 먼저, 사전순 정렬
+                    boolean isAFolder = a.endsWith("/");
+                    boolean isBFolder = b.endsWith("/");
+                    if (isAFolder && !isBFolder) return -1;
+                    if (!isAFolder && isBFolder) return 1;
+                    return a.compareToIgnoreCase(b);
+                })
+                .toList();
+
+        return CodePathListResponse.builder().paths(paths).build();
+    }
+
 }

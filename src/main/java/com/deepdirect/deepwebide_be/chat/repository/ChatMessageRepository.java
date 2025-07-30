@@ -14,4 +14,12 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     // 기존 입장 (after가 있는 경우)
     List<ChatMessage> findByRepositoryIdAndIdGreaterThanOrderByIdAsc(Long repositoryId, Long after, Pageable pageable);
 
+    // 과거 메시지 조회
+    List<ChatMessage> findByRepositoryIdAndIdLessThanOrderByIdDesc(Long repositoryId, Long beforeId, Pageable pageable);
+
+    //키워드 기반 검색
+    List<ChatMessage> findByRepositoryIdAndMessageContainingIgnoreCase(Long repositoryId, String keyword, Pageable pageable);
+
+    //검색된 메시지 개수
+    long countByRepositoryIdAndMessageContainingIgnoreCase(Long repositoryId, String keyword);
 }

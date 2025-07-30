@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.global.exception;
 
 import lombok.Getter;
+import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.http.HttpStatus;
 
 @Getter
@@ -27,6 +28,15 @@ public enum ErrorCode {
     OAUTH_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "OAuth 토큰 요청에 실패했습니다."),
     OAUTH_USER_INFO_ERROR(HttpStatus.BAD_REQUEST, "OAuth 사용자 정보를 가져올 수 없습니다."),
     OAUTH_EMAIL_NOT_FOUND(HttpStatus.BAD_REQUEST, "GitHub에서 이메일 정보를 가져올 수 없습니다."),
+    FILE_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일을 찾을 수 없습니다."),
+    INVALID_PARENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일/폴더 타입입니다."),
+    DUPLICATE_FILE_NAME(HttpStatus.BAD_REQUEST,"동일한 이름의 파일이 이미 존재합니다."),
+    CANNOT_MOVE_TO_CHILD(HttpStatus.BAD_REQUEST, "자신의 하위 폴더로 이동할 수 없습니다."),
+    CANNOT_OPEN_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 열 수 없습니다."),
+    FILE_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일 내용이 존재하지 않습니다."),
+    CANNOT_SAVE_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 저장할 수 없습니다."),
+    HISTORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 히스토리를 찾을 수 없습니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST,"검색 키워드를 입력해주세요."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
@@ -56,7 +66,9 @@ public enum ErrorCode {
 
     // 500 INTERNAL SERVER ERROR
     ENTRY_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "입장 코드 생성에 실패했습니다. 다시 시도해주세요."),
-    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 발송 실패");
+    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 발송 실패"),
+    TEMPLATE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "레포지토리 템플릿 파일 초기화에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    NO_AVAILABLE_PORT(HttpStatus.INTERNAL_SERVER_ERROR, "사용 가능한 실행 포트가 없습니다.");
 
     private final HttpStatus status;
     private final String message;
