@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.global.exception;
 
 import lombok.Getter;
+import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.http.HttpStatus;
 
 @Getter
@@ -24,6 +25,9 @@ public enum ErrorCode {
     CANNOT_DELETE_SHARED_REPOSITORY(HttpStatus.BAD_REQUEST, "공유 중인 레포지토리는 삭제할 수 없습니다."),
     NOT_MEMBER(HttpStatus.BAD_REQUEST,"레포지토리 멤버가 아닙니다."),
     CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST,"자기 자신은 강퇴할 수 없습니다."),
+    OAUTH_TOKEN_ERROR(HttpStatus.BAD_REQUEST, "OAuth 토큰 요청에 실패했습니다."),
+    OAUTH_USER_INFO_ERROR(HttpStatus.BAD_REQUEST, "OAuth 사용자 정보를 가져올 수 없습니다."),
+    OAUTH_EMAIL_NOT_FOUND(HttpStatus.BAD_REQUEST, "GitHub에서 이메일 정보를 가져올 수 없습니다."),
     FILE_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일을 찾을 수 없습니다."),
     INVALID_PARENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일/폴더 타입입니다."),
     DUPLICATE_FILE_NAME(HttpStatus.BAD_REQUEST,"동일한 이름의 파일이 이미 존재합니다."),
@@ -33,6 +37,7 @@ public enum ErrorCode {
     CANNOT_SAVE_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 저장할 수 없습니다."),
     HISTORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 히스토리를 찾을 수 없습니다."),
     MISSING_WS_PARAMS(HttpStatus.BAD_REQUEST, "WebSocket 연결에 필요한 Param이 누락되었습니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST,"검색 키워드를 입력해주세요."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
