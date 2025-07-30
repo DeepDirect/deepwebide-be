@@ -11,7 +11,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -91,9 +90,9 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/redis-test"),
                                 new AntPathRequestMatcher("/test/**"), // Sentry 테스트용
                                 new AntPathRequestMatcher("/ws/**"),
-                                new AntPathRequestMatcher("/test/**"), // Sentry 테스트용
                                 new AntPathRequestMatcher("/login/oauth2/**"),
-                                new AntPathRequestMatcher("/oauth2/**")
+                                new AntPathRequestMatcher("/oauth2/**"),
+                                new AntPathRequestMatcher("/api/projects/**")
                         ).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/signout")).authenticated()
                         .anyRequest().authenticated()

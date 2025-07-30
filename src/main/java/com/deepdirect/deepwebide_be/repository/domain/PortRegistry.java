@@ -17,12 +17,26 @@ public class PortRegistry {
     @OneToOne
     private Repository repository;
 
-    public void setStatus(PortStatus status) {
-        this.status = status;
+//    public void setStatus(PortStatus status) {
+//        this.status = status;
+//    }
+//
+//    public void setRepository(Repository repository) {
+//        this.repository = repository;
+//    }
+
+    public void assignToRepository(Repository repository) {
+        this.status = PortStatus.IN_USE;
+        this.repository = repository;
     }
 
-    public void setRepository(Repository repository) {
-        this.repository = repository;
+    public void release() {
+        this.status = PortStatus.AVAILABLE;
+        this.repository = null;
+    }
+
+    public Integer getPort() {
+        return this.port;
     }
 }
 

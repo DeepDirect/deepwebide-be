@@ -50,7 +50,10 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
     // AWS S3 (파일 업로드 및 다운로드를 위한 라이브러리)
+    // AWS SDK v2 - S3 + presigned URL
+    implementation 'software.amazon.awssdk:s3:2.31.78'
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.673'
+
 
     // 이메일 발송 기능
     implementation 'org.springframework.boot:spring-boot-starter-mail'
@@ -72,7 +75,11 @@ dependencies {
     implementation 'io.sentry:sentry-spring-boot-starter:8.17.0'
     implementation 'io.sentry:sentry-logback:8.17.0'
 
+    // Apache Commons IO (파일 처리 등 유틸리티)
+    implementation 'commons-io:commons-io:2.16.1'
+
     // 테스트 관련 라이브러리
+    implementation 'org.springframework:spring-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
