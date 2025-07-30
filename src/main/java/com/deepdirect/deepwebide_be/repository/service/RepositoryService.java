@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.repository.service;
 
 
+import com.deepdirect.deepwebide_be.chat.util.ChatChannelSubscriptionManager;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.member.domain.User;
@@ -35,6 +36,7 @@ public class RepositoryService {
     private final RepositoryFavoriteRepository repositoryFavoriteRepository;
     private final RepositoryFileService repositoryFileService;
     private final PortRegistryRepository portRegistryRepository;
+    private final ChatChannelSubscriptionManager chatChannelSubscriptionManager;
 
     @Transactional
     public RepositoryCreateResponse createRepository(RepositoryCreateRequest request, Long ownerId) {
@@ -246,6 +248,9 @@ public class RepositoryService {
                     }
             );
 
+            // redis 채널 구독 추가
+            chatChannelSubscriptionManager.subscribe(repositoryId);
+
         } else {
             // 공유 취소 시: 연결된 모든 멤버 soft delete (본인 제외)
             repositoryMemberRepository.findAllByRepositoryIdAndDeletedAtIsNull(repositoryId).stream()
@@ -255,6 +260,8 @@ public class RepositoryService {
             // 링크 및 엔트리코드 삭제
             repo.setShareLink(null);
             entryCodeRepository.deleteByRepositoryId(repositoryId);
+
+            chatChannelSubscriptionManager.unsubscribe(repositoryId);
         }
 
         boolean isFavorite = repositoryFavoriteRepository
