@@ -32,6 +32,7 @@ public enum ErrorCode {
     FILE_CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "파일 내용이 존재하지 않습니다."),
     CANNOT_SAVE_FOLDER(HttpStatus.BAD_REQUEST, "폴더는 저장할 수 없습니다."),
     HISTORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 히스토리를 찾을 수 없습니다."),
+    MISSING_WS_PARAMS(HttpStatus.BAD_REQUEST, "WebSocket 연결에 필요한 Param이 누락되었습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
