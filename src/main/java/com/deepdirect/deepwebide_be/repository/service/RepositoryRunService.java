@@ -8,6 +8,7 @@ import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
 import com.deepdirect.deepwebide_be.repository.repository.PortRegistryRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RunningContainerRepository;
@@ -213,45 +214,42 @@ public class RepositoryRunService {
     /**
      * 레포지토리 상태 조회
      */
-    public Map<String, Object> getRepositoryStatus(Long repositoryId, Long userId) {
+    public RepositoryStatusResponse getRepositoryStatus(Long repositoryId, Long userId) {
         try {
-            // 권한 체크
             repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                     .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
             Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
 
             if (containerOpt.isEmpty()) {
-                return Map.of(
-                        "repositoryId", repositoryId,
-                        "status", "NOT_RUNNING",
-                        "message", "No running container found"
-                );
+                return RepositoryStatusResponse.builder()
+                        .repositoryId(repositoryId)
+                        .dbStatus("NOT_RUNNING")
+                        .sandboxStatus(Map.of("message", "No running container found"))
+                        .build();
             }
 
             RunningContainer container = containerOpt.get();
-
-            // 샌드박스 서버에서 실제 상태 조회
             Map<String, Object> sandboxStatus = sandboxService.getContainerStatus(container.getUuid());
 
-            return Map.of(
-                    "repositoryId", repositoryId,
-                    "uuid", container.getUuid(),
-                    "containerName", container.getContainerName(),
-                    "port", container.getPort(),
-                    "framework", container.getFramework(),
-                    "createdAt", container.getCreatedAt(),
-                    "dbStatus", container.getStatus(),
-                    "sandboxStatus", sandboxStatus
-            );
+            return RepositoryStatusResponse.builder()
+                    .repositoryId(repositoryId)
+                    .uuid(container.getUuid())
+                    .containerName(container.getContainerName())
+                    .port(container.getPort())
+                    .framework(container.getFramework())
+                    .createdAt(container.getCreatedAt())
+                    .dbStatus(container.getStatus())
+                    .sandboxStatus(sandboxStatus)
+                    .build();
 
         } catch (Exception e) {
             log.error("Failed to get repository status: {}", repositoryId, e);
-            return Map.of(
-                    "repositoryId", repositoryId,
-                    "status", "ERROR",
-                    "error", e.getMessage()
-            );
+            return RepositoryStatusResponse.builder()
+                    .repositoryId(repositoryId)
+                    .dbStatus("ERROR")
+                    .sandboxStatus(Map.of("error", e.getMessage()))
+                    .build();
         }
     }
 

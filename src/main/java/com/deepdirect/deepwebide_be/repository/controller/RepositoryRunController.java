@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.repository.controller;
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
+import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStopResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryRunService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,11 +60,11 @@ public class RepositoryRunController {
      */
     @GetMapping("/{repositoryId}/status")
     @Operation(summary = "레포지토리 상태 조회", description = "레포지토리의 실행 상태를 조회합니다.")
-    public ResponseEntity<ApiResponseDto<Map<String, Object>>> getRepositoryStatus(
+    public ResponseEntity<ApiResponseDto<RepositoryStatusResponse>> getRepositoryStatus(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long repositoryId
     ) {
-        Map<String, Object> status = repositoryRunService.getRepositoryStatus(repositoryId, userDetails.getId());
+        RepositoryStatusResponse status = repositoryRunService.getRepositoryStatus(repositoryId, userDetails.getId());
         return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 상태 조회 완료", status));
     }
 }
