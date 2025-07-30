@@ -46,7 +46,7 @@ public class UserService {
     private final RefreshTokenService refreshTokenService;
     private final ReauthTokenService reauthTokenService;
 
-    private String generateUniqueNickname(String baseNickname) {
+    public String generateUniqueNickname(String baseNickname) {
         if (!userRepository.existsByNickname(baseNickname)) {
             return baseNickname;
         }
