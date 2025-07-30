@@ -24,11 +24,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws/chat") // ws://localhost:8080/ws/chat
                 .addInterceptors(handshakeInterceptor)
                 .setAllowedOriginPatterns(
-                        "http://localhost:5173",     // 개발환경 (모든 포트)
-                        "https://localhost:5173",    // HTTPS 로컬
+                        "http://localhost:*",     // 개발환경 (모든 포트)
+                        "https://localhost:*",    // HTTPS 로컬
                         "https://www.deepdirect.site",  // 프론트엔드
                         "https://api.deepdirect.site"   // API 도메인 (필요시)
-                ) //TODO:CORS 허용 (배포시 도메인 지정)
+                ) //TODO:CORS 허용 (배포시 도메인 지지어)
                 .withSockJS(); // SockJS fallback
     }
 
