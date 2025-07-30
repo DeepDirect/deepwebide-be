@@ -55,6 +55,7 @@ jobs:
             export COOLSMS_SECRET="${{ secrets.COOLSMS_SECRET }}"
             export COOLSMS_NUMBER="${{ secrets.COOLSMS_NUMBER }}"
             export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
-            
+            export GIT_CLIENT_ID="${{ secrets.GIT_CLIENT_ID }}"
+            export GIT_CLIENT_SECRET="${{ secrets.GIT_CLIENT_SECRET }}"
             cd ~/app
             bash deploy.sh
