@@ -6,13 +6,11 @@ import com.deepdirect.deepwebide_be.file.repository.FileContentRepository;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
-import com.deepdirect.deepwebide_be.repository.domain.PortRegistry;
-import com.deepdirect.deepwebide_be.repository.domain.PortStatus;
-import com.deepdirect.deepwebide_be.repository.domain.Repository;
-import com.deepdirect.deepwebide_be.repository.domain.RepositoryType;
+import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.repository.PortRegistryRepository;
 import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.repository.RunningContainerRepository;
 import com.deepdirect.deepwebide_be.sandbox.dto.request.SandboxExecutionRequest;
 import com.deepdirect.deepwebide_be.sandbox.dto.response.SandboxExecutionResponse;
 import com.deepdirect.deepwebide_be.sandbox.service.S3Service;
@@ -33,6 +31,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -48,6 +48,7 @@ public class RepositoryRunService {
     private final PortRegistryRepository portRegistryRepository;
     private final FileNodeRepository fileNodeRepository;
     private final FileContentRepository fileContentRepository;
+    private final RunningContainerRepository runningContainerRepository;
 
     @Transactional
     public RepositoryExecuteResponse executeRepository(Long repositoryId, Long userId) {
@@ -55,22 +56,27 @@ public class RepositoryRunService {
 
         File zipFile = null;
         try {
-            // 1. 권한 체크 & 레포지토리 조회
+            // 1. 기존 실행 중인 컨테이너 중지 요청
+            stopExistingContainer(repositoryId);
+
+            // 2. 권한 체크 & 레포지토리 조회
             Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                     .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-            // 2. framework, port 등 정보 추출
+            // 3. framework, port 등 정보 추출
             String framework = convertTypeToFramework(repo.getRepositoryType());
             Integer port = allocateOrGetPort(repo);
 
-            // 3. 파일트리를 zip으로 변환
+            // 4. 새로운 UUID 생성
             String uuid = UUID.randomUUID().toString();
+
+            // 5. 파일트리를 zip으로 변환
             zipFile = fileTreeToZip(repositoryId, uuid);
 
-            // 4. S3 업로드
+            // 6. S3 업로드
             String s3Url = uploadToS3(zipFile, uuid);
 
-            // 5. 샌드박스 실행 요청
+            // 7. 샌드박스 실행 요청
             SandboxExecutionRequest request = SandboxExecutionRequest.builder()
                     .uuid(uuid)
                     .url(s3Url)
@@ -80,7 +86,10 @@ public class RepositoryRunService {
 
             SandboxExecutionResponse result = sandboxService.requestExecution(request);
 
-            log.info("Repository execution completed - uuid: {}, port: {}", uuid, port);
+            // 8. 실행 중인 컨테이너 정보 저장
+            saveRunningContainer(repositoryId, uuid, "sandbox-" + uuid, port, framework, s3Url);
+
+            log.info("Repository execution completed - repositoryId: {}, uuid: {}, port: {}", repositoryId, uuid, port);
 
             return RepositoryExecuteResponse.builder()
                     .uuid(uuid)
@@ -101,8 +110,148 @@ public class RepositoryRunService {
             log.error("Repository execution failed - repositoryId: {}, userId: {}", repositoryId, userId, e);
             throw new GlobalException(ErrorCode.REPOSITORY_EXECUTION_FAILED);
         } finally {
-            // 임시 zip 파일 정리
             cleanupTempFile(zipFile);
+        }
+    }
+
+    /**
+     * 기존 실행 중인 컨테이너 중지
+     */
+    private void stopExistingContainer(Long repositoryId) {
+        runningContainerRepository.findByRepositoryId(repositoryId)
+                .ifPresent(container -> {
+                    try {
+                        log.info("Stopping existing container for repository {}: {}", repositoryId, container.getUuid());
+
+                        // 샌드박스 서버에 중지 요청
+                        boolean success = sandboxService.stopContainer(container.getUuid());
+
+                        if (success) {
+                            // 상태 업데이트
+                            container.stop();
+                            runningContainerRepository.save(container);
+
+                            log.info("Successfully stopped existing container: {}", container.getUuid());
+                        } else {
+                            log.warn("Failed to stop existing container: {}", container.getUuid());
+                        }
+
+                        // 성공 여부와 관계없이 DB에서 제거 (새로운 컨테이너가 실행될 예정이므로)
+                        runningContainerRepository.deleteByRepositoryId(repositoryId);
+
+                    } catch (Exception e) {
+                        log.error("Error while stopping existing container: {}", container.getUuid(), e);
+                        // 에러가 발생해도 DB에서는 제거
+                        runningContainerRepository.deleteByRepositoryId(repositoryId);
+                    }
+                });
+    }
+
+    /**
+     * 실행 중인 컨테이너 정보 저장
+     */
+    @Transactional
+    public void saveRunningContainer(Long repositoryId, String uuid, String containerName,
+                                     Integer port, String framework, String s3Url) {
+        try {
+            RunningContainer container = RunningContainer.builder()
+                    .repositoryId(repositoryId)
+                    .uuid(uuid)
+                    .containerName(containerName)
+                    .port(port)
+                    .status("RUNNING")
+                    .framework(framework)
+                    .s3Url(s3Url)
+                    .build();
+
+            runningContainerRepository.save(container);
+            log.info("Saved running container info - repositoryId: {}, uuid: {}, port: {}",
+                    repositoryId, uuid, port);
+
+        } catch (Exception e) {
+            log.error("Failed to save running container info - repositoryId: {}, uuid: {}",
+                    repositoryId, uuid, e);
+        }
+    }
+
+    /**
+     * 레포지토리 중지 (수동)
+     */
+    @Transactional
+    public boolean stopRepository(Long repositoryId, Long userId) {
+        try {
+            // 권한 체크
+            repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+            Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
+
+            if (containerOpt.isEmpty()) {
+                log.info("No running container found for repository: {}", repositoryId);
+                return false;
+            }
+
+            RunningContainer container = containerOpt.get();
+
+            // 샌드박스 서버에 중지 요청
+            boolean success = sandboxService.stopContainer(container.getUuid());
+
+            if (success) {
+                container.stop();
+                runningContainerRepository.save(container);
+                log.info("Successfully stopped repository: {} (uuid: {})", repositoryId, container.getUuid());
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            log.error("Failed to stop repository: {}", repositoryId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 레포지토리 상태 조회
+     */
+    public Map<String, Object> getRepositoryStatus(Long repositoryId, Long userId) {
+        try {
+            // 권한 체크
+            repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+            Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
+
+            if (containerOpt.isEmpty()) {
+                return Map.of(
+                        "repositoryId", repositoryId,
+                        "status", "NOT_RUNNING",
+                        "message", "No running container found"
+                );
+            }
+
+            RunningContainer container = containerOpt.get();
+
+            // 샌드박스 서버에서 실제 상태 조회
+            Map<String, Object> sandboxStatus = sandboxService.getContainerStatus(container.getUuid());
+
+            return Map.of(
+                    "repositoryId", repositoryId,
+                    "uuid", container.getUuid(),
+                    "containerName", container.getContainerName(),
+                    "port", container.getPort(),
+                    "framework", container.getFramework(),
+                    "createdAt", container.getCreatedAt(),
+                    "dbStatus", container.getStatus(),
+                    "sandboxStatus", sandboxStatus
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to get repository status: {}", repositoryId, e);
+            return Map.of(
+                    "repositoryId", repositoryId,
+                    "status", "ERROR",
+                    "error", e.getMessage()
+            );
         }
     }
 

@@ -4,12 +4,15 @@ import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryRunService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RestController
@@ -21,6 +24,7 @@ public class RepositoryRunController {
     private final RepositoryRunService repositoryRunService;
 
     @PostMapping("/{repositoryId}/execute")
+    @Operation(summary = "레포지토리 실행", description = "레포지토리를 실행하고 실행 결과를 반환합니다.")
     public ResponseEntity<ApiResponseDto<RepositoryExecuteResponse>> executeRepository(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long repositoryId
@@ -29,5 +33,37 @@ public class RepositoryRunController {
         return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 실행 요청 완료", resp));
     }
 
+    /**
+     * 레포지토리 중지
+     */
+    @DeleteMapping("/{repositoryId}/stop")
+    @Operation(summary = "레포지토리 중지", description = "레포지토리를 중지하고 중지 결과를 반환합니다.")
+    public ResponseEntity<ApiResponseDto<Map<String, Object>>> stopRepository(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId
+    ) {
+        boolean success = repositoryRunService.stopRepository(repositoryId, userDetails.getId());
+
+        Map<String, Object> result = Map.of(
+                "repositoryId", repositoryId,
+                "stopped", success,
+                "message", success ? "레포지토리가 중지되었습니다." : "중지할 컨테이너가 없습니다."
+        );
+
+        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 중지 요청 완료", result));
+    }
+
+    /**
+     * 레포지토리 실행 상태 조회
+     */
+    @GetMapping("/{repositoryId}/status")
+    @Operation(summary = "레포지토리 상태 조회", description = "레포지토리의 실행 상태를 조회합니다.")
+    public ResponseEntity<ApiResponseDto<Map<String, Object>>> getRepositoryStatus(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId
+    ) {
+        Map<String, Object> status = repositoryRunService.getRepositoryStatus(repositoryId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 상태 조회 완료", status));
+    }
 }
 
