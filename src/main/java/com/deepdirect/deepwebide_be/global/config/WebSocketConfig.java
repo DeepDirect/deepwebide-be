@@ -23,7 +23,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat") // ws://localhost:8080/ws/chat
                 .addInterceptors(handshakeInterceptor)
-                .setAllowedOriginPatterns("*") //TODO:CORS 허용 (배포시 도메인 지지어)
+                .setAllowedOriginPatterns("https://deepdirect.site") //TODO:CORS 허용 (배포시 도메인 지지어)
                 .withSockJS(); // SockJS fallback
     }
 
