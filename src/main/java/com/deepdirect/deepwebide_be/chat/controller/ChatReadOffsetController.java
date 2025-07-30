@@ -17,7 +17,7 @@ public class ChatReadOffsetController {
 
     private final ChatReadOffsetService chatReadOffsetService;
 
-    @PutMapping("/read-offset")
+    @PatchMapping("/read-offset")
     public ResponseEntity<ApiResponseDto<Void>> saveReadOffset(
             @PathVariable Long repositoryId,
             @Valid @RequestBody ChatReadOffsetRequest request,
