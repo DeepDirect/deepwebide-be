@@ -79,6 +79,7 @@ public class RepositoryRunController {
      * 레포지토리 실행 로그 조회
      */
     @GetMapping("/{repositoryId}/logs")
+    @Operation(summary = "레포지토리 로그 조회", description = "레포지토리의 실행 로그를 조회합니다.")
     public ResponseEntity<ApiResponseDto<Map<String, Object>>> getRepositoryLogs(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long repositoryId,
