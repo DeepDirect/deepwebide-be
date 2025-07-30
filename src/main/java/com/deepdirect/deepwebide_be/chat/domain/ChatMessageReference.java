@@ -20,7 +20,7 @@ public class ChatMessageReference {
     @JoinColumn(name = "chat_message_id", nullable = false)
     private ChatMessage chatMessage;
 
-    @Column(name = "path", nullable = false)
+    @Column(name = "path", nullable = true)
     private String path;
 
     @Column(name = "line_number")
