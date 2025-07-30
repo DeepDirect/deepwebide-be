@@ -434,9 +434,6 @@ public class RepositoryRunService {
     /**
      * 레포지토리 로그 조회
      */
-    /**
-     * 레포지토리 로그 조회 (상태 자동 동기화)
-     */
     public Map<String, Object> getRepositoryLogs(Long repositoryId, Long userId, int lines, String since) {
         try {
             log.info("Getting repository logs - repositoryId: {}, userId: {}", repositoryId, userId);
@@ -447,7 +444,10 @@ public class RepositoryRunService {
             Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
 
             if (containerOpt.isEmpty()) {
-                return createNoContainerResponse(repositoryId);
+                return Map.of(
+                        "port", null,
+                        "logs", "실행 중인 컨테이너가 없습니다."
+                );
             }
 
             RunningContainer container = containerOpt.get();
@@ -466,29 +466,27 @@ public class RepositoryRunService {
                     if ("CONTAINER_NOT_FOUND".equals(status)) {
                         log.warn("Container {} not found, updating DB status", container.getUuid());
 
-                        // DB 상태 자동 동기화
                         container.stop();
                         runningContainerRepository.save(container);
 
-                        Map<String, Object> result = new HashMap<>(response);
-                        result.put("repositoryId", repositoryId);
-                        result.put("dbStatusUpdated", true);
-                        result.put("message", "컨테이너가 존재하지 않아 DB 상태를 업데이트했습니다.");
-                        result.put("containerInfo", createContainerInfo(container, "STOPPED"));
-
-                        return result;
+                        return Map.of(
+                                "port", null,
+                                "logs", "컨테이너가 존재하지 않아 중지되었습니다."
+                        );
                     }
 
-                    // 정상 응답 처리
-                    Map<String, Object> result = new HashMap<>(response);
-                    result.put("repositoryId", repositoryId);
-                    result.put("requestedUrl", url);
-                    result.put("containerInfo", createContainerInfo(container, container.getStatus()));
-
-                    return result;
+                    // 정상 응답 - 포트와 로그만 반환
+                    String logs = extractLogs(response);
+                    return Map.of(
+                            "port", container.getPort(),
+                            "logs", logs
+                    );
                 }
 
-                return createErrorResponse(repositoryId, "Empty response from sandbox server");
+                return Map.of(
+                        "port", container.getPort(),
+                        "logs", "로그를 가져올 수 없습니다."
+                );
 
             } catch (Exception httpEx) {
                 log.error("HTTP request failed - url: {}", url, httpEx);
@@ -499,13 +497,40 @@ public class RepositoryRunService {
                     runningContainerRepository.save(container);
                 }
 
-                return createErrorResponse(repositoryId, httpEx.getMessage());
+                return Map.of(
+                        "port", container.getPort(),
+                        "logs", "로그 조회 중 오류가 발생했습니다: " + httpEx.getMessage()
+                );
             }
 
         } catch (Exception e) {
             log.error("Failed to get repository logs: {}", repositoryId, e);
-            return createErrorResponse(repositoryId, e.getMessage());
+            return Map.of(
+                    "port", null,
+                    "logs", "오류가 발생했습니다: " + e.getMessage()
+            );
         }
+    }
+
+    private String extractLogs(Map<String, Object> response) {
+        StringBuilder combinedLogs = new StringBuilder();
+
+        String stdout = (String) response.get("stdout");
+        String stderr = (String) response.get("stderr");
+
+        if (stderr != null && !stderr.trim().isEmpty()) {
+            combinedLogs.append(stderr.trim());
+        }
+
+        if (stdout != null && !stdout.trim().isEmpty()) {
+            if (combinedLogs.length() > 0) {
+                combinedLogs.append("\n");
+            }
+            combinedLogs.append(stdout.trim());
+        }
+
+        String result = combinedLogs.toString();
+        return result.isEmpty() ? "로그가 없습니다." : result;
     }
 
     private Map<String, Object> createContainerInfo(RunningContainer container, String actualStatus) {
