@@ -62,7 +62,7 @@ coolsms:
   api:
     key: ${COOLSMS_KEY}
     secret: ${COOLSMS_SECRET}
-    number: 01037415700
+    number: ${COOLSMS_NUMBER}
 
 management:
   endpoints:
