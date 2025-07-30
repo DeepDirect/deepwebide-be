@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -32,6 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
+            log.debug("🧪 JWT 필터 실행 - URI: {}, Authorization: {}, QueryToken: {}",
+                    request.getRequestURI(),
+                    request.getHeader("Authorization"),
+                    request.getParameter("token"));
+
             String uri = request.getRequestURI();
 
             if (
@@ -86,12 +93,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+//    private String resolveToken(HttpServletRequest request) {
+//        String bearer = request.getHeader("Authorization");
+//        if (bearer == null || !bearer.startsWith("Bearer ")) {
+//            throw new GlobalException(ErrorCode.MISSING_TOKEN);
+//        }
+//        return bearer.substring(7);
+//    }
+
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
-        if (bearer == null || !bearer.startsWith("Bearer ")) {
-            throw new GlobalException(ErrorCode.MISSING_TOKEN);
+
+        // 1. 일반 HTTP 요청: Authorization 헤더에서 토큰 추출
+        if (bearer != null && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
         }
-        return bearer.substring(7);
+
+        // 2. WebSocket 연결 시: ?token=Bearer xxx 형식으로 전달됨
+        String queryToken = request.getParameter("token");
+        if (queryToken != null && queryToken.startsWith("Bearer ")) {
+            return queryToken.substring(7);
+        }
+
+        throw new GlobalException(ErrorCode.MISSING_TOKEN);
     }
+
 }
 
