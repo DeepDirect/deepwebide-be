@@ -21,7 +21,7 @@ public class ChatMessageResponse {
     @Schema(description = "보낸 사람 닉네임")
     private final String senderNickname;
 
-    @Schema(description = "보낸 사람 프로필 이미지", nullable = true)
+    @Schema(description = "보낸 사람 프로필 이미지")
     private final String senderProfileImageUrl;
 
     @Schema(description = "메시지 본문")

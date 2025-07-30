@@ -3,9 +3,7 @@ package com.deepdirect.deepwebide_be.chat.domain;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.repository.domain.Repository;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +11,8 @@ import java.time.LocalDateTime;
 @Table(name = "chat_messages")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class ChatMessage {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,4 +36,14 @@ public class ChatMessage {
     public void prePersist() {
         this.sentAt = LocalDateTime.now();
     }
+
+    public static ChatMessage of(Repository repo, User user, String message) {
+        return ChatMessage.builder()
+                .repository(repo)
+                .sender(user)
+                .message(message)
+                .build();
+    }
+
+
 }

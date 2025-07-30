@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Web IDE 채팅 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h2>✅ Web IDE 채팅 테스트</h2>
+<div>
+  <label>Access Token: <input type="text" id="accessToken" placeholder="Postman에서 복사한 AccessToken 입력" style="width: 500px;" /></label><br/>
+  <label>Repository ID: <input type="number" id="repoId" value="1" /></label><br/>
+  <button onclick="connect()">WebSocket 연결</button>
+</div>
+
+<hr/>
+
+<div>
+  <label>Message: <input type="text" id="message" /></label>
+  <button onclick="send()">전송</button>
+</div>
+
+<hr/>
+
+<ul id="chat"></ul>
+
+<script>
+  let stompClient = null;
+
+  function connect() {
+    const repoId = document.getElementById("repoId").value;
+    const accessToken = document.getElementById("accessToken").value;
+
+    if (!accessToken || !repoId) {
+      alert("AccessToken과 Repository ID를 입력해주세요.");
+      return;
+    }
+
+    const tokenWithBearer = `Bearer ${accessToken}`;
+    const socket = new SockJS(`http://localhost:8080/ws/chat?token=${encodeURIComponent(tokenWithBearer)}&repositoryId=${repoId}`);
+
+    // const socket = new SockJS(`http://localhost:8080/ws/chat?token=${accessToken}&repositoryId=${repoId}`);
+    stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, () => {
+      console.log("✅ STOMP 연결 완료");
+
+      stompClient.subscribe(`/topic/repositories/${repoId}/chat`, (msg) => {
+        console.log("📢 입장/퇴장 메시지:", JSON.parse(msg.body));
+      });
+
+      stompClient.subscribe(`/sub/repositories/${repoId}/chat`, (msg) => {
+        const data = JSON.parse(msg.body);
+        console.log("💬 채팅 메시지:", data);
+        const li = document.createElement("li");
+        li.textContent = `[${data.senderNickname}] ${data.message}`;
+        document.getElementById("chat").appendChild(li);
+      });
+
+      console.log("🧭 채팅방 연결 완료");
+    }, (error) => {
+      console.error("❌ STOMP 연결 실패", error);
+    });
+  }
+
+  function send() {
+    const repoId = document.getElementById("repoId").value;
+    const message = document.getElementById("message").value;
+
+    if (!stompClient || !stompClient.connected) {
+      alert("WebSocket이 연결되지 않았습니다.");
+      return;
+    }
+
+    stompClient.send(`/app/repositories/${repoId}/chat/send`, {}, JSON.stringify({
+      message: message
+    }));
+
+    document.getElementById("message").value = "";
+  }
+</script>
+</body>
+</html>

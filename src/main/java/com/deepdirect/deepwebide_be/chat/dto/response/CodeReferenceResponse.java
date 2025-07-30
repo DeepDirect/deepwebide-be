@@ -16,8 +16,6 @@ public class CodeReferenceResponse {
     @Schema(description = "파일 경로")
     private final String path;
 
-
-
     public static CodeReferenceResponse from(ChatMessageReference ref) {
         return CodeReferenceResponse.builder()
                 .referenceId(ref.getId())
