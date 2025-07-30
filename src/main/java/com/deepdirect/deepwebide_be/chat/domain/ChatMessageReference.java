@@ -23,9 +23,6 @@ public class ChatMessageReference {
     @Column(name = "path", nullable = false)
     private String path;
 
-    @Column(name = "line_number")
-    private Integer lineNumber;
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
