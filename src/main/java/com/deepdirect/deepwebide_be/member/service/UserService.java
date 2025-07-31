@@ -118,7 +118,7 @@ public class UserService {
                 .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
 
         if (!user.isEmailVerified()) {
-            throw new GlobalException(ErrorCode.EMAIL_NOT_VERIFIED);
+            emailVerificationService.handleEmailVerification(user.getEmail());
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
