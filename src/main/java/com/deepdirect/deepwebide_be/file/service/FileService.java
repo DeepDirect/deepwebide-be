@@ -14,7 +14,9 @@ import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -302,4 +304,63 @@ public class FileService {
         }
         return fileNode;
     }
+
+
+    @Transactional
+    public FileNodeResponse uploadFile(Long repositoryId, Long userId, Long parentId, MultipartFile file) {
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 부모 폴더 체크
+        FileNode parent = null;
+        String parentPath = "";
+        if (parentId != null) {
+            parent = findFileNodeWithRepositoryCheck(repositoryId, parentId);
+            if (!parent.getFileType().equals(FileType.FOLDER)) {
+                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
+            }
+            parentPath = parent.getPath();
+        }
+
+        // 3. 중복 이름 체크
+        if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
+                repositoryId, parentId, file.getOriginalFilename())) {
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        }
+
+        // 4. 경로 계산
+        String newPath = parentPath.isEmpty() ? file.getOriginalFilename() : parentPath + "/" + file.getOriginalFilename();
+
+        // 5. FileNode 생성
+        FileNode fileNode = FileNode.builder()
+                .repository(repo)
+                .name(file.getOriginalFilename())
+                .fileType(FileType.FILE)
+                .parent(parent)
+                .path(newPath)
+                .build();
+        fileNode = fileNodeRepository.save(fileNode);
+
+        // 6. 파일 내용 저장
+        try {
+            FileContent content = FileContent.builder()
+                    .fileNode(fileNode)
+                    .content(file.getBytes())
+                    .build();
+            fileContentRepository.save(content);
+        } catch (IOException e) {
+            throw new GlobalException(ErrorCode.FILE_UPLOAD_FAIL);
+        }
+
+        // 7. 응답 반환
+        return FileNodeResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .fileType("FILE")
+                .parentId(parent == null ? null : parent.getId())
+                .path(fileNode.getPath())
+                .build();
+    }
+
 }
