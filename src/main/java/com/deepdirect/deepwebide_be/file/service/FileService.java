@@ -265,17 +265,26 @@ public class FileService {
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 폴더는 열 수 없음
         if (fileNode.getFileType() == FileType.FOLDER) {
             throw new GlobalException(ErrorCode.CANNOT_OPEN_FOLDER);
         }
 
-        // 파일 내용 조회
         FileContent fileContent = fileContentRepository.findByFileNode(fileNode)
                 .orElseThrow(() -> new GlobalException(ErrorCode.FILE_CONTENT_NOT_FOUND));
 
-        // byte[] → String 변환 (UTF-8)
-        String content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+        // 확장자 체크
+        String fileName = fileNode.getName();
+        String extension = "";
+        int idx = fileName.lastIndexOf('.');
+        if (idx > 0) extension = fileName.substring(idx + 1).toLowerCase();
+
+        String content;
+        // 이미지/바이너리면 Base64, 텍스트면 UTF-8
+        if (List.of("png", "jpg", "jpeg", "gif", "svg").contains(extension)) {
+            content = Base64.getEncoder().encodeToString(fileContent.getContent());
+        } else {
+            content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+        }
 
         return FileContentResponse.builder()
                 .fileId(fileNode.getId())
