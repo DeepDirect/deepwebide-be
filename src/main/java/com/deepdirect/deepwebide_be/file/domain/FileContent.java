@@ -18,7 +18,7 @@ public class FileContent {
     private FileNode fileNode;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "MEDIUMBLOB")
     private byte[] content;
 
     // 내용 변경용 커스텀 메서드
