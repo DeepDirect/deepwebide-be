@@ -40,7 +40,7 @@ public class EmailVerificationService {
     // 이메일 인증 요청 메일 발송
     public void sendVerificationEmail(String email, String code) {
 //        String link = "http://localhost:8080/api/auth/email/send-code?code=" + code;
-        String link = "https://api.deepwebide.site/api/auth/email/send-code?code=" + code;
+        String link = "https://api.deepdirect.site/api/auth/email/send-code?code=" + code;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
@@ -53,7 +53,6 @@ public class EmailVerificationService {
     // 이메일 인증 코드 검증
     public boolean verifyEmailCode(String code) {
         return emailVerificationRepository.findByEmailCode(code)
-                .filter(verification -> !verification.isVerified()) // 기존 인증 여부 확인
                 .filter(verification ->
                         verification.getExpiresAt().isAfter(LocalDateTime.now())) // 만료 여부 확인
                 .map(verification -> {
@@ -63,5 +62,11 @@ public class EmailVerificationService {
                     return true;
                 })
                 .orElse(false);
+    }
+
+    public String findVerifiedEmailByCode(String code) {
+        return emailVerificationRepository.findByEmailCode(code)
+                .map(EmailVerification::getEmail)
+                .orElseThrow(() -> new IllegalArgumentException("해당 코드로 등록된 이메일이 없습니다."));
     }
 }
