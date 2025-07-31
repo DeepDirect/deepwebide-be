@@ -3,6 +3,7 @@ package com.deepdirect.deepwebide_be.chat.dto.request;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessageType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Schema(description = "채팅 메시지 전송 요청")
 public class ChatMessageRequest {
 
+    @NotBlank(message = "메시지는 공백일 수 없습니다.")
     @Schema(description = "메시지 내용", example = "코드 이부분 이상한 것 같아")
     private String message;
 
