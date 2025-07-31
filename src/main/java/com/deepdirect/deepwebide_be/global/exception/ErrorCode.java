@@ -43,6 +43,7 @@ public enum ErrorCode {
     FILE_TREE_CONVERSION_FAILED(HttpStatus.BAD_REQUEST, "파일 트리 변환에 실패했습니다."),
     FILE_UPLOAD_FAIL(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
     PARENT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "부모 폴더 ID는 필수입니다."),
+    FILE_EXTENSION_REQUIRED(HttpStatus.BAD_REQUEST, "파일 확장자는 필수입니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
