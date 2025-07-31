@@ -75,6 +75,10 @@ public class UserService {
             throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
         }
 
+        if (request.getPassword().length() < 8) {
+            throw new GlobalException(ErrorCode.PASSWORD_TOO_SHORT);
+        }
+
         if (!PASSWORD_REGEX.matcher(request.getPassword()).matches()) {
             throw new GlobalException(ErrorCode.INVALID_PASSWORD_FORMAT);
         }
