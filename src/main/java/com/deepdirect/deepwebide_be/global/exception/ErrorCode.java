@@ -49,6 +49,7 @@ public enum ErrorCode {
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
     MISSING_TOKEN(HttpStatus.UNAUTHORIZED, "Access Token이 누락되었습니다."),
     EMAIL_NOT_VERIFIED(HttpStatus.UNAUTHORIZED, "이메일 인증이 완료되지 않았습니다."),
+    EMAIL_NOT_VERIFIED_CODE_RESENT(HttpStatus.UNAUTHORIZED, "인증 코드가 만료되어 새로운 인증 이메일을 발송했습니다."),
 
 
     // 403 FORBIDDEN
