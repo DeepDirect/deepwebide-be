@@ -65,6 +65,10 @@ public class FileService {
 
     @Transactional
     public FileNodeResponse createFileOrFolder(Long repositoryId, Long userId, FileCreateRequest req) {
+
+        if (req.getParentId() == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
         // 1. 레포 권한 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -192,6 +196,11 @@ public class FileService {
     @Transactional
     public FileNodeResponse moveFileOrFolder(
             Long repositoryId, Long fileId, Long userId, Long newParentId) {
+
+        if (newParentId == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
+
         repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
@@ -199,17 +208,15 @@ public class FileService {
         // 새 부모 폴더 체크
         FileNode newParent = null;
         String newParentPath = "";
-        if (newParentId != null) {
-            newParent = findFileNodeWithRepositoryCheck(repositoryId, newParentId);
-            if (!newParent.isFolder()) {
-                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
-            }
-            // 순환구조 방지 (본인 또는 하위로 이동 불가)
-            if (isDescendant(fileNode, newParent)) {
-                throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
-            }
-            newParentPath = newParent.getPath();
+        newParent = findFileNodeWithRepositoryCheck(repositoryId, newParentId);
+        if (!newParent.isFolder()) {
+            throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
         }
+        // 순환구조 방지 (본인 또는 하위로 이동 불가)
+        if (isDescendant(fileNode, newParent)) {
+            throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
+        }
+        newParentPath = newParent.getPath();
 
         // 같은 폴더에 동일 이름 체크
         if (fileNodeRepository.existsByRepositoryIdAndParentAndName(
@@ -228,7 +235,7 @@ public class FileService {
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
                 .fileType(fileNode.getFileType().name())
-                .parentId(newParent == null ? null : newParent.getId())
+                .parentId(newParent.getId())
                 .path(fileNode.getPath())
                 .build();
     }
@@ -308,6 +315,11 @@ public class FileService {
 
     @Transactional
     public FileNodeResponse uploadFile(Long repositoryId, Long userId, Long parentId, MultipartFile file) {
+
+        if (parentId == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
+
         // 1. 권한/레포 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -315,13 +327,11 @@ public class FileService {
         // 2. 부모 폴더 체크
         FileNode parent = null;
         String parentPath = "";
-        if (parentId != null) {
-            parent = findFileNodeWithRepositoryCheck(repositoryId, parentId);
-            if (!parent.getFileType().equals(FileType.FOLDER)) {
-                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
-            }
-            parentPath = parent.getPath();
+        parent = findFileNodeWithRepositoryCheck(repositoryId, parentId);
+        if (!parent.getFileType().equals(FileType.FOLDER)) {
+            throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
         }
+        parentPath = parent.getPath();
 
         // 3. 중복 이름 체크
         if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
@@ -358,7 +368,7 @@ public class FileService {
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
                 .fileType("FILE")
-                .parentId(parent == null ? null : parent.getId())
+                .parentId(parent.getId())
                 .path(fileNode.getPath())
                 .build();
     }
