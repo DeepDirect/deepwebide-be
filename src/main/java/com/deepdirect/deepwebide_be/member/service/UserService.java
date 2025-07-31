@@ -117,6 +117,10 @@ public class UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
 
+        if (!user.isEmailVerified()) {
+            emailVerificationService.handleEmailVerification(user.getEmail());
+        }
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new GlobalException(ErrorCode.WRONG_PASSWORD);
         }
