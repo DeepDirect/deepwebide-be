@@ -42,6 +42,7 @@ public enum ErrorCode {
     REPOSITORY_FILES_NOT_FOUND(HttpStatus.BAD_REQUEST, "레포지토리 파일을 찾을 수 없습니다."),
     FILE_TREE_CONVERSION_FAILED(HttpStatus.BAD_REQUEST, "파일 트리 변환에 실패했습니다."),
     FILE_UPLOAD_FAIL(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
+    PARENT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "부모 폴더 ID는 필수입니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
