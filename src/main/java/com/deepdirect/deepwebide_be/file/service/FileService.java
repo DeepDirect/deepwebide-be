@@ -69,6 +69,11 @@ public class FileService {
         if (req.getParentId() == null) {
             throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
         }
+
+        if ("FILE".equals(req.getFileType())) {
+            validateFileNameHasExtension(req.getFileName());
+        }
+
         // 1. 레포 권한 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -128,6 +133,10 @@ public class FileService {
         repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
+
+        if (fileNode.getFileType() == FileType.FILE) {
+            validateFileNameHasExtension(newFileName);
+        }
 
         // 2. 같은 폴더 내에 동일 이름 존재 체크
         Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
@@ -320,6 +329,10 @@ public class FileService {
             throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
         }
 
+        String fileName = file.getOriginalFilename();
+        validateFileNameHasExtension(fileName);
+
+
         // 1. 권한/레포 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -371,6 +384,12 @@ public class FileService {
                 .parentId(parent.getId())
                 .path(fileNode.getPath())
                 .build();
+    }
+
+    private void validateFileNameHasExtension(String fileName) {
+        if (fileName == null || !fileName.contains(".") || fileName.startsWith(".") || fileName.endsWith(".")) {
+            throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
+        }
     }
 
 }
