@@ -53,7 +53,6 @@ public class EmailVerificationService {
     // 이메일 인증 코드 검증
     public boolean verifyEmailCode(String code) {
         return emailVerificationRepository.findByEmailCode(code)
-                .filter(verification -> !verification.isVerified()) // 기존 인증 여부 확인
                 .filter(verification ->
                         verification.getExpiresAt().isAfter(LocalDateTime.now())) // 만료 여부 확인
                 .map(verification -> {
