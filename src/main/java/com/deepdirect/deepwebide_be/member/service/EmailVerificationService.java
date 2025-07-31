@@ -63,4 +63,10 @@ public class EmailVerificationService {
                 })
                 .orElse(false);
     }
+
+    public String findVerifiedEmailByCode(String code) {
+        return emailVerificationRepository.findByEmailCode(code)
+                .map(EmailVerification::getEmail)
+                .orElseThrow(() -> new IllegalArgumentException("해당 코드로 등록된 이메일이 없습니다."));
+    }
 }
