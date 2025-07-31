@@ -1,24 +1,15 @@
 package com.deepdirect.deepwebide_be.member.controller;
 
 import com.deepdirect.deepwebide_be.member.service.EmailVerificationService;
+import com.deepdirect.deepwebide_be.member.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
-import java.util.HashMap;
-import java.util.Map;
-
-//@CrossOrigin(
-//        origins = {
-//                "http://localhost:5173",
-//                "https://www.deepdirect.site",
-//                "https://api.deepdirect.site"
-//        },
-//        allowCredentials = "true"
-//)
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth/email")
@@ -26,24 +17,22 @@ import java.util.Map;
 public class EmailVerificationController {
 
     private final EmailVerificationService emailVerificationService;
+    private final UserService userService;
 
     @Operation(
             summary = "이메일 인증"
     )
     @GetMapping("/send-code")
-    public ResponseEntity<Map<String, Object>> verifyEmail(@RequestParam String code) {
+    public RedirectView verifyEmail(@RequestParam String code) {
         boolean result = emailVerificationService.verifyEmailCode(code);
-        Map<String, Object> response = new HashMap<>();
+        String email = emailVerificationService.findVerifiedEmailByCode(code);
 
-        // TODO: 리다이랙트 넣기~
         if (result) {
-            response.put("success", true);
-            response.put("message", "이메일 인증이 완료되었습니다.");
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("success", false);
-            response.put("message", "인증 코드가 만료되었거나 유효하지 않습니다.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            userService.setEmailVerificationService(email);
         }
+
+        RedirectView redirectView = new RedirectView();
+        redirectView.setUrl("https://www.deepdirect.site/sign-in");
+        return redirectView;
     }
 }

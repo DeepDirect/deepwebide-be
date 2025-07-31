@@ -10,6 +10,7 @@ import com.deepdirect.deepwebide_be.chat.dto.response.CodeReferenceResponse;
 import com.deepdirect.deepwebide_be.chat.repository.ChatMessageReferenceRepository;
 import com.deepdirect.deepwebide_be.chat.repository.ChatMessageRepository;
 import com.deepdirect.deepwebide_be.file.domain.FileNode;
+import com.deepdirect.deepwebide_be.file.domain.FileType;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
@@ -164,15 +165,9 @@ public class ChatMessageService {
         List<FileNode> fileNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
 
         List<String> paths = fileNodes.stream()
+                .filter(node -> node.getFileType() == FileType.FILE) // ← 폴더는 제외
                 .map(FileNode::getPath)
-                .sorted((a, b) -> {
-                    // 폴더 먼저, 사전순 정렬
-                    boolean isAFolder = a.endsWith("/");
-                    boolean isBFolder = b.endsWith("/");
-                    if (isAFolder && !isBFolder) return -1;
-                    if (!isAFolder && isBFolder) return 1;
-                    return a.compareToIgnoreCase(b);
-                })
+                .sorted(String::compareToIgnoreCase)
                 .toList();
 
         return CodePathListResponse.builder().paths(paths).build();
