@@ -21,9 +21,17 @@ public class ChatMessageRequest {
     @JsonProperty("type")
     private ChatMessageType type;
 
+    @Schema(description = "레포지토리 ID")
+    private Long repositoryId;
+
+    @Schema(description = "코드 참조 정보")
+    private CodeReferenceRequest codeReference;
+
     @Builder
-    public ChatMessageRequest(String message, ChatMessageType type) {
+    public ChatMessageRequest(String message, ChatMessageType type, Long repositoryId, CodeReferenceRequest codeReference) {
         this.message = message;
         this.type = type;
+        this.repositoryId = repositoryId;
+        this.codeReference = codeReference;
     }
 }

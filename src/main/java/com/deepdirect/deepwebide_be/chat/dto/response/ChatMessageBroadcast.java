@@ -35,6 +35,9 @@ public class ChatMessageBroadcast {
     @Schema(description = "메시지 내용")
     private String message;
 
+    @Schema(description = "코드 참조 정보", nullable = true)
+    private CodeReferenceResponse codeReference;
+
     @Schema(description = "보낸 시간")
     private LocalDateTime sentAt;
 
@@ -42,7 +45,7 @@ public class ChatMessageBroadcast {
     private boolean isMine;
 
 
-    public static ChatMessageBroadcast of(ChatMessage message, User sender, Long repositoryId) {
+    public static ChatMessageBroadcast of(ChatMessage message, User sender, Long repositoryId, CodeReferenceResponse codeReference) {
         return ChatMessageBroadcast.builder()
                 .repositoryId(repositoryId)
                 .type(ChatMessageType.CHAT) //일반 채팅
@@ -51,8 +54,9 @@ public class ChatMessageBroadcast {
                 .senderNickname(sender.getNickname())
                 .senderProfileImageUrl(sender.getProfileImageUrl())
                 .message(message.getMessage())
+                .codeReference(codeReference)
                 .sentAt(message.getSentAt())
-                .isMine(true)
+                .isMine(false)
                 .build();
     }
 
@@ -65,6 +69,7 @@ public class ChatMessageBroadcast {
                 .senderNickname(user.getNickname())
                 .senderProfileImageUrl(user.getProfileImageUrl())
                 .message(message)
+                .codeReference(null)
                 .sentAt(LocalDateTime.now())
                 .isMine(false)
                 .build();
