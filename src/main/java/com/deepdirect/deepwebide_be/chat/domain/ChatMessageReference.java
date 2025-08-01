@@ -16,11 +16,11 @@ public class ChatMessageReference {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_message_id", nullable = false)
     private ChatMessage chatMessage;
 
-    @Column(name = "path", nullable = true)
+    @Column(name = "path", nullable = false)
     private String path;
 
     @Column(name = "created_at")

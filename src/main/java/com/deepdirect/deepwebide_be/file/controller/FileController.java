@@ -10,10 +10,12 @@ import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -110,5 +112,16 @@ public class FileController {
                 repositoryId, fileId, userDetails.getId(), req.getContent()
         );
         return ResponseEntity.ok(ApiResponseDto.of(200, "파일 내용 저장 완료했습니다.", response));
+    }
+
+    @PostMapping("/{repositoryId}/files/upload")
+    public ResponseEntity<ApiResponseDto<FileNodeResponse>> uploadFile(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long repositoryId,
+            @RequestParam("parentId") @NotNull Long parentId, // 필수 지정
+            @RequestParam("file") MultipartFile file
+    ) {
+        FileNodeResponse response = fileService.uploadFile(repositoryId, userDetails.getId(), parentId, file);
+        return ResponseEntity.ok(ApiResponseDto.of(201, "파일 업로드 완료", response));
     }
 }

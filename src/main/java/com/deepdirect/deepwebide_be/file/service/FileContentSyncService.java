@@ -22,7 +22,7 @@ public class FileContentSyncService {
     private final FileContentRepository fileContentRepository;
     private final FileNodeRepository fileNodeRepository;
 
-    @Scheduled(fixedRate = 60000) // 1분마다 실행
+    @Scheduled(fixedRate = 30000) // 30초마다 실행
     public void syncRedisToDb() {
         Set<String> dirtyFileKeys = redisTemplate.opsForSet().members(DIRTY_SET_KEY);
         if (dirtyFileKeys == null) return;

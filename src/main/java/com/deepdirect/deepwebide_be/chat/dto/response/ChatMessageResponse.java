@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Builder
@@ -27,8 +26,8 @@ public class ChatMessageResponse {
     @Schema(description = "메시지 본문")
     private final String message;
 
-    @Schema(description = "코드 참조 목록")
-    private final List<CodeReferenceResponse> codeReferences;
+    @Schema(description = "코드 참조")
+    private final CodeReferenceResponse codeReference;
 
     @Schema(description = "내 메시지 여부", name = "IsMine")
     private final boolean isMine;

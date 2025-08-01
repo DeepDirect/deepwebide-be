@@ -45,6 +45,10 @@ public class ChatMessageWriteService {
         User sender = userRepository.findById(userId)
                 .orElseThrow(() -> new GlobalException(USER_NOT_FOUND));
 
+        if (content == null || content.isEmpty()) {
+            throw new GlobalException(EMPTY_CHAT_MESSAGE);
+        }
+
         ChatMessage chatMessage = chatMessageRepository.save(
                 ChatMessage.of(repository, sender, content)
         );
