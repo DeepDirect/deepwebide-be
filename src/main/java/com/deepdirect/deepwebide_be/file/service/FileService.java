@@ -77,6 +77,8 @@ public class FileService {
 
         if ("FILE".equals(req.getFileType())) {
             validateFileNameHasExtension(req.getFileName());
+        } else if ("FOLDER".equals(req.getFileType())){
+            validateFolderNameNoExtension(req.getFileName());
         }
 
         // 1. 레포 권한 체크
@@ -152,6 +154,8 @@ public class FileService {
 
         if (fileNode.getFileType() == FileType.FILE) {
             validateFileNameHasExtension(newFileName);
+        } else if(fileNode.getFileType() == FileType.FOLDER){
+            validateFolderNameNoExtension(newFileName);
         }
 
         // 2. 같은 폴더 내에 동일 이름 존재 체크
@@ -440,6 +444,12 @@ public class FileService {
     private void validateFileNameHasExtension(String fileName) {
         if (fileName == null || !fileName.contains(".") || fileName.startsWith(".") || fileName.endsWith(".")) {
             throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
+        }
+    }
+
+    private void validateFolderNameNoExtension(String fileName) {
+        if (fileName.contains(".")) {
+            throw new GlobalException(ErrorCode.FOLDER_EXTENSION_NOT_ALLOWED);
         }
     }
 

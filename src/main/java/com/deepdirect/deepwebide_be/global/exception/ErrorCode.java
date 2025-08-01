@@ -47,6 +47,7 @@ public enum ErrorCode {
     PARENT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "부모 폴더 ID는 필수입니다."),
     FILE_EXTENSION_REQUIRED(HttpStatus.BAD_REQUEST, "파일 확장자는 필수입니다."),
     EMPTY_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "메시지는 공백일 수 없습니다."),
+    FOLDER_EXTENSION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "폴더는 확장자를 가질 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
