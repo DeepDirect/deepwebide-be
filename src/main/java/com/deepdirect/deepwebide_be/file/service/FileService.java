@@ -30,8 +30,13 @@ public class FileService {
 
     public List<FileTreeNodeResponse> getFileTree(Long repositoryId, Long userId) {
         // 1. 레포지토리/권한 체크
-        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 모든 FileNode 조회 (1쿼리)
         List<FileNode> allNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
@@ -75,8 +80,13 @@ public class FileService {
         }
 
         // 1. 레포 권한 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 부모 폴더 체크 (없으면 null)
         FileNode parent = null;
@@ -130,8 +140,14 @@ public class FileService {
     @Transactional
     public FileRenameResponse renameFileOrFolder(Long repositoryId, Long fileId, Long userId, String newFileName) {
         // 1. 권한/레포 체크
-        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
+
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
         if (fileNode.getFileType() == FileType.FILE) {
@@ -170,8 +186,14 @@ public class FileService {
 
     @Transactional
     public void deleteFileOrFolder(Long repositoryId, Long fileId, Long userId) {
-        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
+
         FileNode node = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
         // (폴더일 경우) 하위 전체 삭제 (재귀)
@@ -210,8 +232,13 @@ public class FileService {
             throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
         }
 
-        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
         // 새 부모 폴더 체크
@@ -261,8 +288,13 @@ public class FileService {
 
     @Transactional(readOnly = true)
     public FileContentResponse getFileContent(Long repositoryId, Long fileId, Long userId) {
-        repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
         if (fileNode.getFileType() == FileType.FOLDER) {
@@ -297,8 +329,13 @@ public class FileService {
     @Transactional
     public FileContentSaveResponse saveFileContent(Long repositoryId, Long fileId, Long userId, String content) {
         // 1. 레포 권한 및 존재 확인
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 파일 노드 + 소속 레포 검증
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
@@ -343,8 +380,13 @@ public class FileService {
 
 
         // 1. 권한/레포 체크
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 부모 폴더 체크
         FileNode parent = null;
