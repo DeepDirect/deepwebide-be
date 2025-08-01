@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +56,13 @@ public class PhoneVerificationService {
     }
 
     // 문자 발송
+
     public int sendVerificationCode(String phoneNumber, String reqUserName, AuthType reqAuthType) {
+        // 휴대전화 번호 형식 정규식 (010으로 시작하고 숫자 총 10~11자리)
+        Pattern phonePattern = Pattern.compile("^01[0|1|6|7|8|9][0-9]{7,8}$");
+        if (!phonePattern.matcher(phoneNumber).matches()) {
+            throw new GlobalException(ErrorCode.INVALID_PHONE_FORMAT);
+        }
 
         if (reqAuthType == AuthType.SIGN_UP && isUserExists(phoneNumber, reqUserName)) {
             throw new GlobalException(ErrorCode.DUPLICATE_NAME_AND_PHONE);
@@ -74,7 +81,6 @@ public class PhoneVerificationService {
             throw new GlobalException(ErrorCode.SMS_SEND_FAILED);
         }
 
-        // 인증 정보 저장
         phoneVerificationRepository.save(
                 PhoneVerification.builder()
                         .phoneNumber(phoneNumber)

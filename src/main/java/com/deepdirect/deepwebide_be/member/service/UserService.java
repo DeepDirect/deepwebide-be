@@ -82,7 +82,10 @@ public class UserService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new GlobalException(ErrorCode.DUPLICATE_EMAIL);
         }
-
+        Pattern phonePattern = Pattern.compile("^01[0|1|6|7|8|9][0-9]{7,8}$");
+        if (!phonePattern.matcher(request.getPhoneNumber()).matches()) {
+            throw new GlobalException(ErrorCode.INVALID_PHONE_FORMAT);
+        }
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new GlobalException(ErrorCode.PHONE_NUMBER_ALREADY_USED);
         }
