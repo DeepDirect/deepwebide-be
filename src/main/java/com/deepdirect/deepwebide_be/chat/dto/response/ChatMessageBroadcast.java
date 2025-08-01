@@ -45,7 +45,7 @@ public class ChatMessageBroadcast {
     private boolean isMine;
 
 
-    public static ChatMessageBroadcast of(ChatMessage message, User sender, Long repositoryId, CodeReferenceResponse codeReference) {
+    public static ChatMessageBroadcast of(ChatMessage message, User sender, Long repositoryId, CodeReferenceResponse codeReference, Long currentUserId) {
         return ChatMessageBroadcast.builder()
                 .repositoryId(repositoryId)
                 .type(ChatMessageType.CHAT) //일반 채팅
@@ -56,7 +56,7 @@ public class ChatMessageBroadcast {
                 .message(message.getMessage())
                 .codeReference(codeReference)
                 .sentAt(message.getSentAt())
-                .isMine(false)
+                .isMine(sender.getId().equals(currentUserId))
                 .build();
     }
 
