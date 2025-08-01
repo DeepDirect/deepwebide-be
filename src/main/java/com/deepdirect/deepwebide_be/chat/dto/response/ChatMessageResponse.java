@@ -29,8 +29,8 @@ public class ChatMessageResponse {
     @Schema(description = "코드 참조")
     private final CodeReferenceResponse codeReference;
 
-    @Schema(description = "내 메시지 여부", name = "IsMine")
-    private final boolean isMine;
+    @Schema(description = "내 메시지 여부")
+    private final boolean IsMine;
 
     @Schema(description = "보낸 시간", example = "2025-07-25T21:20:00Z")
     private final LocalDateTime sentAt;

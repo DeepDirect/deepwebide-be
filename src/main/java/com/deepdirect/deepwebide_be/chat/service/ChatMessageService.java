@@ -97,7 +97,7 @@ public class ChatMessageService {
                         .codeReference(Optional.ofNullable(referenceMap.get(msg.getId()))
                                 .map(CodeReferenceResponse::from)
                                 .orElse(null))
-                        .isMine(msg.getSender().getId().equals(userId))
+                        .IsMine(msg.getSender().getId().equals(userId))
                         .sentAt(msg.getSentAt())
                         .build())
                 .toList();
@@ -141,7 +141,7 @@ public class ChatMessageService {
                         .codeReference(Optional.ofNullable(ref.get(msg.getId()))
                                 .map(CodeReferenceResponse::from)
                                 .orElse(null))
-                        .isMine(msg.getSender().getId().equals(userId))
+                        .IsMine(msg.getSender().getId().equals(userId))
                         .sentAt(msg.getSentAt())
                         .build()
         ).toList();
