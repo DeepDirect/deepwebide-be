@@ -2,6 +2,7 @@ package com.deepdirect.deepwebide_be.file.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
@@ -16,6 +17,7 @@ public class FileCreateRequest {
     @NotBlank(message = "파일 타입은 필수입니다.")
     private String fileType;
 
-    @Schema(description = "부모 폴더 ID (최상위면 null)", example = "1")
-    private Long parentId; // null 허용 -> 검증 X
+    @Schema(description = "부모 폴더 ID (필수)", example = "1")
+    @NotNull(message = "부모 폴더 ID는 필수입니다.") // 추가
+    private Long parentId;
 }

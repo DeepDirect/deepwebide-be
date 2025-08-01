@@ -14,7 +14,9 @@ import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -63,6 +65,15 @@ public class FileService {
 
     @Transactional
     public FileNodeResponse createFileOrFolder(Long repositoryId, Long userId, FileCreateRequest req) {
+
+        if (req.getParentId() == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
+
+        if ("FILE".equals(req.getFileType())) {
+            validateFileNameHasExtension(req.getFileName());
+        }
+
         // 1. 레포 권한 체크
         Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
@@ -122,6 +133,10 @@ public class FileService {
         repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
+
+        if (fileNode.getFileType() == FileType.FILE) {
+            validateFileNameHasExtension(newFileName);
+        }
 
         // 2. 같은 폴더 내에 동일 이름 존재 체크
         Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
@@ -190,6 +205,11 @@ public class FileService {
     @Transactional
     public FileNodeResponse moveFileOrFolder(
             Long repositoryId, Long fileId, Long userId, Long newParentId) {
+
+        if (newParentId == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
+
         repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
@@ -197,17 +217,15 @@ public class FileService {
         // 새 부모 폴더 체크
         FileNode newParent = null;
         String newParentPath = "";
-        if (newParentId != null) {
-            newParent = findFileNodeWithRepositoryCheck(repositoryId, newParentId);
-            if (!newParent.isFolder()) {
-                throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
-            }
-            // 순환구조 방지 (본인 또는 하위로 이동 불가)
-            if (isDescendant(fileNode, newParent)) {
-                throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
-            }
-            newParentPath = newParent.getPath();
+        newParent = findFileNodeWithRepositoryCheck(repositoryId, newParentId);
+        if (!newParent.isFolder()) {
+            throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
         }
+        // 순환구조 방지 (본인 또는 하위로 이동 불가)
+        if (isDescendant(fileNode, newParent)) {
+            throw new GlobalException(ErrorCode.CANNOT_MOVE_TO_CHILD);
+        }
+        newParentPath = newParent.getPath();
 
         // 같은 폴더에 동일 이름 체크
         if (fileNodeRepository.existsByRepositoryIdAndParentAndName(
@@ -226,7 +244,7 @@ public class FileService {
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
                 .fileType(fileNode.getFileType().name())
-                .parentId(newParent == null ? null : newParent.getId())
+                .parentId(newParent.getId())
                 .path(fileNode.getPath())
                 .build();
     }
@@ -247,17 +265,26 @@ public class FileService {
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
-        // 폴더는 열 수 없음
         if (fileNode.getFileType() == FileType.FOLDER) {
             throw new GlobalException(ErrorCode.CANNOT_OPEN_FOLDER);
         }
 
-        // 파일 내용 조회
         FileContent fileContent = fileContentRepository.findByFileNode(fileNode)
                 .orElseThrow(() -> new GlobalException(ErrorCode.FILE_CONTENT_NOT_FOUND));
 
-        // byte[] → String 변환 (UTF-8)
-        String content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+        // 확장자 체크
+        String fileName = fileNode.getName();
+        String extension = "";
+        int idx = fileName.lastIndexOf('.');
+        if (idx > 0) extension = fileName.substring(idx + 1).toLowerCase();
+
+        String content;
+        // 이미지/바이너리면 Base64, 텍스트면 UTF-8
+        if (List.of("png", "jpg", "jpeg", "gif", "svg").contains(extension)) {
+            content = Base64.getEncoder().encodeToString(fileContent.getContent());
+        } else {
+            content = new String(fileContent.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+        }
 
         return FileContentResponse.builder()
                 .fileId(fileNode.getId())
@@ -302,4 +329,76 @@ public class FileService {
         }
         return fileNode;
     }
+
+
+    @Transactional
+    public FileNodeResponse uploadFile(Long repositoryId, Long userId, Long parentId, MultipartFile file) {
+
+        if (parentId == null) {
+            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
+        }
+
+        String fileName = file.getOriginalFilename();
+        validateFileNameHasExtension(fileName);
+
+
+        // 1. 권한/레포 체크
+        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        // 2. 부모 폴더 체크
+        FileNode parent = null;
+        String parentPath = "";
+        parent = findFileNodeWithRepositoryCheck(repositoryId, parentId);
+        if (!parent.getFileType().equals(FileType.FOLDER)) {
+            throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
+        }
+        parentPath = parent.getPath();
+
+        // 3. 중복 이름 체크
+        if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
+                repositoryId, parentId, file.getOriginalFilename())) {
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        }
+
+        // 4. 경로 계산
+        String newPath = parentPath.isEmpty() ? file.getOriginalFilename() : parentPath + "/" + file.getOriginalFilename();
+
+        // 5. FileNode 생성
+        FileNode fileNode = FileNode.builder()
+                .repository(repo)
+                .name(file.getOriginalFilename())
+                .fileType(FileType.FILE)
+                .parent(parent)
+                .path(newPath)
+                .build();
+        fileNode = fileNodeRepository.save(fileNode);
+
+        // 6. 파일 내용 저장
+        try {
+            FileContent content = FileContent.builder()
+                    .fileNode(fileNode)
+                    .content(file.getBytes())
+                    .build();
+            fileContentRepository.save(content);
+        } catch (IOException e) {
+            throw new GlobalException(ErrorCode.FILE_UPLOAD_FAIL);
+        }
+
+        // 7. 응답 반환
+        return FileNodeResponse.builder()
+                .fileId(fileNode.getId())
+                .fileName(fileNode.getName())
+                .fileType("FILE")
+                .parentId(parent.getId())
+                .path(fileNode.getPath())
+                .build();
+    }
+
+    private void validateFileNameHasExtension(String fileName) {
+        if (fileName == null || !fileName.contains(".") || fileName.startsWith(".") || fileName.endsWith(".")) {
+            throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
+        }
+    }
+
 }
