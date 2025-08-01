@@ -38,6 +38,6 @@ public class ChatWebSocketController {
         ChatMessageBroadcast broadcast = chatMessageWriteService.saveChatMessage(userId, request);
 
         // 3. Redis 채널로 publish
-        redisPublisher.publish("chatroom:" + request.getRepositoryId(), broadcast);
+        redisPublisher.publish("chat:" + request.getRepositoryId(), broadcast);
     }
 }

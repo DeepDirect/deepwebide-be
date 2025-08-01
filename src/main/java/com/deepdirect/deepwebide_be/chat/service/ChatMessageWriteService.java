@@ -73,6 +73,6 @@ public class ChatMessageWriteService {
         // 3. 응답 DTO 변환
         CodeReferenceResponse codeReferenceResponse = reference != null ? CodeReferenceResponse.from(reference) : null;
 
-        return ChatMessageBroadcast.of(chatMessage, sender, repositoryId, codeReferenceResponse);
+        return ChatMessageBroadcast.of(chatMessage, sender, repositoryId, codeReferenceResponse, userId);
     }
 }
