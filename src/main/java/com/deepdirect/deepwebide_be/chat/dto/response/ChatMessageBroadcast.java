@@ -5,7 +5,6 @@ import com.deepdirect.deepwebide_be.chat.domain.ChatMessageType;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
@@ -41,8 +40,8 @@ public class ChatMessageBroadcast {
     @Schema(description = "보낸 시간")
     private LocalDateTime sentAt;
 
-    @Schema(description = "내 메시지 여부", name = "IsMine")
-    private boolean isMine;
+    @Schema(description = "내 메시지 여부")
+    private boolean IsMine;
 
 
     public static ChatMessageBroadcast of(ChatMessage message, User sender, Long repositoryId, CodeReferenceResponse codeReference, Long currentUserId) {
@@ -56,7 +55,7 @@ public class ChatMessageBroadcast {
                 .message(message.getMessage())
                 .codeReference(codeReference)
                 .sentAt(message.getSentAt())
-                .isMine(sender.getId().equals(currentUserId))
+                .IsMine(sender.getId().equals(currentUserId))
                 .build();
     }
 
@@ -71,7 +70,7 @@ public class ChatMessageBroadcast {
                 .message(message)
                 .codeReference(null)
                 .sentAt(LocalDateTime.now())
-                .isMine(false)
+                .IsMine(false)
                 .build();
     }
 }

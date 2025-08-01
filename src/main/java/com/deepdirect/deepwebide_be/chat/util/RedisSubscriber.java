@@ -4,7 +4,6 @@ import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageBroadcast;
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatSystemMessageResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -45,7 +44,7 @@ public class RedisSubscriber implements MessageListener {
                         .message(broadcast.getMessage())
                         .codeReference(broadcast.getCodeReference())
                         .sentAt(broadcast.getSentAt())
-                        .isMine(false)
+                        .IsMine(false)
                         .build();
 
                 messagingTemplate.convertAndSend("/sub/repositories/" + repositoryId + "/chat", response);
