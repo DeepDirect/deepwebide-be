@@ -75,6 +75,10 @@ public class UserService {
             throw new GlobalException(ErrorCode.PASSWORDS_DO_NOT_MATCH);
         }
 
+        if (request.getPassword().length() < 8) {
+            throw new GlobalException(ErrorCode.PASSWORD_TOO_SHORT);
+        }
+
         if (!PASSWORD_REGEX.matcher(request.getPassword()).matches()) {
             throw new GlobalException(ErrorCode.INVALID_PASSWORD_FORMAT);
         }
@@ -116,6 +120,10 @@ public class UserService {
     public SignInResponse signIn(SignInRequest request, HttpServletResponse servletResponse) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new GlobalException(ErrorCode.WRONG_PASSWORD));
+
+        if (!user.isEmailVerified()) {
+            emailVerificationService.handleEmailVerification(user.getEmail());
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new GlobalException(ErrorCode.WRONG_PASSWORD);

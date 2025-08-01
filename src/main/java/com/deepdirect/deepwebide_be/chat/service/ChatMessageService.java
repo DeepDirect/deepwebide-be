@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,10 +77,14 @@ public class ChatMessageService {
 
         // 참조 메시지 조회
         List<Long> messageIds = messages.stream().map(ChatMessage::getId).toList();
-        Map<Long, List<ChatMessageReference>> referenceMap = referenceRepository
+        Map<Long, ChatMessageReference> referenceMap = referenceRepository
                 .findByChatMessageIdIn(messageIds)
                 .stream()
-                .collect(Collectors.groupingBy(ref -> ref.getChatMessage().getId()));
+                .collect(Collectors.toMap(
+                        ref -> ref.getChatMessage().getId(),
+                        Function.identity()
+                ));
+
 
         // 응답 변환
         List<ChatMessageResponse> responses = messages.stream()
@@ -88,11 +94,9 @@ public class ChatMessageService {
                         .senderNickname(msg.getSender().getNickname())
                         .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
                         .message(msg.getMessage())
-                        .codeReferences(referenceMap
-                                .getOrDefault(msg.getId(), List.of())
-                                .stream()
+                        .codeReference(Optional.ofNullable(referenceMap.get(msg.getId()))
                                 .map(CodeReferenceResponse::from)
-                                .toList())
+                                .orElse(null))
                         .isMine(msg.getSender().getId().equals(userId))
                         .sentAt(msg.getSentAt())
                         .build())
@@ -121,9 +125,11 @@ public class ChatMessageService {
 
         long total = chatMessageRepository.countByRepositoryIdAndMessageContainingIgnoreCase(repositoryId, keyword);
 
-        Map<Long, List<ChatMessageReference>> ref = referenceRepository
+        Map<Long, ChatMessageReference> ref = referenceRepository
                 .findByChatMessageIdIn(result.stream().map(ChatMessage::getId).toList())
-                .stream().collect(Collectors.groupingBy(r -> r.getChatMessage().getId()));
+                .stream()
+                .collect(Collectors.toMap(r -> r.getChatMessage().getId(), Function.identity()
+                ));
 
         List<ChatMessageResponse> responses = result.stream().map(msg ->
                 ChatMessageResponse.builder()
@@ -132,9 +138,9 @@ public class ChatMessageService {
                         .senderNickname(msg.getSender().getNickname())
                         .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
                         .message(msg.getMessage())
-                        .codeReferences(ref.getOrDefault(msg.getId(), List.of())
-                                .stream().map(CodeReferenceResponse::from)
-                                .toList())
+                        .codeReference(Optional.ofNullable(ref.get(msg.getId()))
+                                .map(CodeReferenceResponse::from)
+                                .orElse(null))
                         .isMine(msg.getSender().getId().equals(userId))
                         .sentAt(msg.getSentAt())
                         .build()

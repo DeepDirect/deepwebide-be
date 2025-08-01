@@ -21,7 +21,7 @@ public class EmailVerification {
     @Column(nullable = false)
     private String emailCode;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @Column(nullable = false)
