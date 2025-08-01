@@ -42,6 +42,7 @@ public enum ErrorCode {
     UNSUPPORTED_REPOSITORY_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 레포지토리 타입입니다."),
     REPOSITORY_FILES_NOT_FOUND(HttpStatus.BAD_REQUEST, "레포지토리 파일을 찾을 수 없습니다."),
     FILE_TREE_CONVERSION_FAILED(HttpStatus.BAD_REQUEST, "파일 트리 변환에 실패했습니다."),
+    INVALID_PHONE_FORMAT(HttpStatus.BAD_REQUEST, "올바른 휴대전화 번호 형식이 아닙니다."),
     FILE_UPLOAD_FAIL(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
     PARENT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "부모 폴더 ID는 필수입니다."),
     FILE_EXTENSION_REQUIRED(HttpStatus.BAD_REQUEST, "파일 확장자는 필수입니다."),
