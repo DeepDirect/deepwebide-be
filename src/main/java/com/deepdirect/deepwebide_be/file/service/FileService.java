@@ -77,7 +77,10 @@ public class FileService {
 
         if ("FILE".equals(req.getFileType())) {
             validateFileNameHasExtension(req.getFileName());
+        } else if ("FOLDER".equals(req.getFileType())){
+            validateFolderNameNoExtension(req.getFileName());
         }
+        validateNoKoreanCharacters(req.getFileName());
 
         // 1. 레포 권한 체크
         Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
@@ -152,7 +155,10 @@ public class FileService {
 
         if (fileNode.getFileType() == FileType.FILE) {
             validateFileNameHasExtension(newFileName);
+        } else if(fileNode.getFileType() == FileType.FOLDER){
+            validateFolderNameNoExtension(newFileName);
         }
+        validateNoKoreanCharacters(newFileName);
 
         // 2. 같은 폴더 내에 동일 이름 존재 체크
         Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
@@ -442,5 +448,16 @@ public class FileService {
             throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
         }
     }
-
+    //폴더는 확장자가 있어서는 안됨
+    private void validateFolderNameNoExtension(String fileName) {
+        if (fileName.contains(".")) {
+            throw new GlobalException(ErrorCode.FOLDER_EXTENSION_NOT_ALLOWED);
+        }
+    }
+    //폴더와 파일 명은 한국어가 포함되어 있으면 안됨
+    private void validateNoKoreanCharacters(String fileName) {
+        if (fileName.matches(".*[ㄱ-ㅎㅏ-ㅣ가-힣]+.*")) {
+            throw new GlobalException(ErrorCode.KOREAN_NOT_ALLOWED);
+        }
+    }
 }
