@@ -1,6 +1,8 @@
 package com.deepdirect.deepwebide_be.chat.util;
 
 import com.deepdirect.deepwebide_be.chat.dto.response.ChatMessageBroadcast;
+import com.deepdirect.deepwebide_be.chat.dto.response.ChatSystemMessageResponse;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
@@ -24,28 +26,35 @@ public class RedisSubscriber implements MessageListener {
     public void onMessage(Message message, byte[] pattern) {
         try {
             String raw = new String(message.getBody(), StandardCharsets.UTF_8);
-            ChatMessageBroadcast broadcast = objectMapper.readValue(raw, ChatMessageBroadcast.class);
+            JsonNode root = objectMapper.readTree(raw);
 
-            // isMine은 false로 변경 (다른 사람들에게 보내는 메시지)
-            ChatMessageBroadcast response = ChatMessageBroadcast.builder()
-                    .type(broadcast.getType())
-                    .messageId(broadcast.getMessageId())
-                    .senderId(broadcast.getSenderId())
-                    .senderNickname(broadcast.getSenderNickname())
-                    .senderProfileImageUrl(broadcast.getSenderProfileImageUrl())
-                    .message(broadcast.getMessage())
-                    .sentAt(broadcast.getSentAt())
-                    .isMine(false)
-                    .build();
-
+            String type = root.get("type").asText();
             String topic = new String(message.getChannel(), StandardCharsets.UTF_8);
             Long repositoryId = Long.parseLong(topic.split(":")[1]);
 
-            // 구독 중인 사용자들에게 메시지 전송
-            messagingTemplate.convertAndSend(
-                    "/sub/repositories/" + repositoryId + "/chat",
-                    response
-            );
+            log.info("📩 Redis 메시지 도착! raw: {}", raw);
+
+            if ("CHAT".equals(type)) {
+                ChatMessageBroadcast broadcast = objectMapper.treeToValue(root, ChatMessageBroadcast.class);
+                ChatMessageBroadcast response = ChatMessageBroadcast.builder()
+                        .type(broadcast.getType())
+                        .messageId(broadcast.getMessageId())
+                        .senderId(broadcast.getSenderId())
+                        .senderNickname(broadcast.getSenderNickname())
+                        .senderProfileImageUrl(broadcast.getSenderProfileImageUrl())
+                        .message(broadcast.getMessage())
+                        .codeReference(broadcast.getCodeReference())
+                        .sentAt(broadcast.getSentAt())
+                        .isMine(false)
+                        .build();
+
+                messagingTemplate.convertAndSend("/sub/repositories/" + repositoryId + "/chat", response);
+
+            } else {
+                // USER_JOINED, USER_LEFT
+                ChatSystemMessageResponse system = objectMapper.treeToValue(root, ChatSystemMessageResponse.class);
+                messagingTemplate.convertAndSend("/topic/repositories/" + repositoryId + "/chat", system);
+            }
         } catch (Exception e) {
             log.error("❌ RedisSubscriber: 메시지 처리 중 에러 발생", e);
         }

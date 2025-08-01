@@ -38,6 +38,13 @@ public class StompHandler implements ChannelInterceptor {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new GlobalException(ErrorCode.USER_NOT_FOUND));
 
+
+            String username = user.getUsername();
+            String nickname = user.getNickname();
+            log.info("WebSocket 연결: userId={}", userId);
+            log.info("WebSocket 연결: username={}", username);
+            log.info("WebSocket 연결: nickname={}", nickname);
+
             accessor.setUser(new CustomUserDetails(user));
         }
 
