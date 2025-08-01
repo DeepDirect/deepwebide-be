@@ -4,8 +4,8 @@ import com.deepdirect.deepwebide_be.chat.domain.ChatMessage;
 import com.deepdirect.deepwebide_be.chat.domain.ChatMessageType;
 import com.deepdirect.deepwebide_be.member.domain.User;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 

@@ -63,6 +63,7 @@ public enum ErrorCode {
     ENTRY_CODE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "오너만 확인할 수 있습니다."),
     ENTRY_CODE_REISSUE_DENIED(HttpStatus.FORBIDDEN, "해당 레포지토리의 소유자만 입장 코드를 재발급할 수 있습니다."),
     NOT_OWNER_TO_KICK(HttpStatus.FORBIDDEN,"해당 레포의 소유자만 멤버를 강퇴할 수 있습니다."),
+    REPOSITORY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "오너 및 멤버만 접근할 수 있습니다."),
 
     // 404 NOT FOUND
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),

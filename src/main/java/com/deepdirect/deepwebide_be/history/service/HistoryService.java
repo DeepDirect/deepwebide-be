@@ -46,9 +46,13 @@ public class HistoryService {
     @Transactional
     public HistorySaveResponse saveHistory(Long repositoryId, Long userId, HistorySaveRequest request) {
         // 1. 권한 체크 및 레포 조회
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
         // 2. 현재 DB의 파일/폴더 전체 조회
         List<FileNode> dbNodes = fileNodeRepository.findAllByRepositoryId(repositoryId);
 
@@ -97,8 +101,13 @@ public class HistoryService {
     @Transactional(readOnly = true)
     public HistoryDetailResponse getHistoryDetail(Long repositoryId, Long historyId, Long userId) {
         // 1. 권한 체크 & 레포 확인
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 히스토리 조회
         History history = historyRepository.findById(historyId)
@@ -130,8 +139,13 @@ public class HistoryService {
     @Transactional(readOnly = true)
     public List<HistoryListResponse> getHistories(Long repositoryId, Long userId) {
         // 1. 권한 체크 & 레포 확인
-        Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         // 2. 히스토리 목록(최신순) 조회
         List<History> histories = historyRepository.findByRepositoryOrderByCreatedAtDesc(repo);
@@ -157,8 +171,13 @@ public class HistoryService {
     @Transactional
     public HistoryRestoreResponse restoreHistory(Long repositoryId, Long historyId, Long userId) {
         // 1. 레포/오너 확인
-        Repository repo = repositoryRepository.findById(repositoryId)
+        Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
+        if (!hasAccess) {
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+        }
 
         if (!repo.getOwner().getId().equals(userId)) {
             throw new GlobalException(ErrorCode.FORBIDDEN);
