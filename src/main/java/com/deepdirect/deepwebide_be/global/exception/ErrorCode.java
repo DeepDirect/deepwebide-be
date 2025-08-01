@@ -15,7 +15,6 @@ public enum ErrorCode {
     REPOSITORY_MEMBER_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "최대 인원이 초과되어 입장할 수 없습니다."),
     INVALID_USERNAME(HttpStatus.BAD_REQUEST, "이름은 한글 2자 이상만 입력 가능합니다."),
     INVALID_PASSWORD_FORMAT(HttpStatus.BAD_REQUEST, "비밀번호는 영어 대문자, 소문자, 숫자, 특수문자를 모두 포함해야 합니다."),
-    INVALID_PHONE_FORMAT(HttpStatus.BAD_REQUEST, "올바른 휴대전화 번호 형식이 아닙니다."),
     VERIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다."),
     NOT_OWNER_CHANGE(HttpStatus.BAD_REQUEST, "오너만 이름을 변경할 수 있습니다."), //오너만 이름 변경!!
     NOT_OWNER_DELETE(HttpStatus.BAD_REQUEST, "오너만 삭제할 수 있습니다."), //오너만 삭제 가능
@@ -42,6 +41,7 @@ public enum ErrorCode {
     UNSUPPORTED_REPOSITORY_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 레포지토리 타입입니다."),
     REPOSITORY_FILES_NOT_FOUND(HttpStatus.BAD_REQUEST, "레포지토리 파일을 찾을 수 없습니다."),
     FILE_TREE_CONVERSION_FAILED(HttpStatus.BAD_REQUEST, "파일 트리 변환에 실패했습니다."),
+    INVALID_PHONE_FORMAT(HttpStatus.BAD_REQUEST, "올바른 휴대전화 번호 형식이 아닙니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),
