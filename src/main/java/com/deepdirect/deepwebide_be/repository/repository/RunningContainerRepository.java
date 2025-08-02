@@ -29,4 +29,7 @@ public interface RunningContainerRepository extends JpaRepository<RunningContain
 
     @Query("SELECT COUNT(rc) FROM RunningContainer rc WHERE rc.status = 'RUNNING'")
     long countRunningContainers();
+
+    List<RunningContainer> findAllByStatusAndCreatedAtBefore(String status, LocalDateTime dateTime);
+
 }

@@ -1,7 +1,9 @@
 package com.deepdirect.deepwebide_be.repository.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
+@Getter
 @Entity
 @Table(name = "port_registry")
 public class PortRegistry {
@@ -17,13 +19,7 @@ public class PortRegistry {
     @OneToOne
     private Repository repository;
 
-//    public void setStatus(PortStatus status) {
-//        this.status = status;
-//    }
-//
-//    public void setRepository(Repository repository) {
-//        this.repository = repository;
-//    }
+    public PortRegistry() {} // JPA 기본 생성자
 
     public void assignToRepository(Repository repository) {
         this.status = PortStatus.IN_USE;
@@ -35,8 +31,4 @@ public class PortRegistry {
         this.repository = null;
     }
 
-    public Integer getPort() {
-        return this.port;
-    }
 }
-
