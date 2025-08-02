@@ -65,6 +65,8 @@ public enum ErrorCode {
     INVALID_FOLDER_NAME_ONLY_DOTS(HttpStatus.BAD_REQUEST, "'.' 또는 '..'은 폴더명으로 사용할 수 없습니다."),
     INVALID_FOLDER_NAME_CONTAINS_DOT(HttpStatus.BAD_REQUEST, "폴더명에는 '.'을 포함할 수 없습니다. 숨김 폴더는 '.'으로 시작해야 합니다."),
     INVALID_FOLDER_NAME_HIDDEN_BUT_INVALID(HttpStatus.BAD_REQUEST, "숨김 폴더명은 '.'으로 시작하고 이후에 이름이 있어야 합니다."),
+    EMPTY_FOLDER_NAME(HttpStatus.BAD_REQUEST, "폴더명은 공백이거나 100자 이상일 수 없습니다."),
+    EMPTY_FILE_NAME(HttpStatus.BAD_REQUEST, "파일명은 공백이거나 255자 이상일 수 없습니다."),
 
     // 401 UNAUTHORIZED
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않았습니다."),

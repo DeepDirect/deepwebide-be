@@ -436,7 +436,7 @@ public class FileService {
             throw new GlobalException(ErrorCode.INVALID_FILE_NAME_KOREAN);
 
         if (!Pattern.matches("^[a-zA-Z0-9._-]{1,255}$", name))
-            throw new GlobalException(ErrorCode.INVALID_FILE_NAME);
+            throw new GlobalException(ErrorCode.EMPTY_FILE_NAME);
 
         if (name.matches("[.]+"))
             throw new GlobalException(ErrorCode.INVALID_FILE_NAME_ONLY_DOTS);
@@ -473,7 +473,7 @@ public class FileService {
 
     private void validateFolderName(String name) {
         if (name.length() < 1 || name.length() > 100)
-            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME);
+            throw new GlobalException(ErrorCode.EMPTY_FOLDER_NAME);
         if (Pattern.compile("[ㄱ-ㅎㅏ-ㅣ가-힣]").matcher(name).find())
             throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_KOREAN);
         if (name.startsWith(" ") || name.endsWith(" ") || name.contains(" "))
