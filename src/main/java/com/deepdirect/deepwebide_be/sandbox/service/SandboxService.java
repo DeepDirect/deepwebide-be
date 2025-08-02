@@ -20,7 +20,7 @@ public class SandboxService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${sandbox.api.base-url:http://localhost:9090}")
+    @Value("${sandbox.api.base-url}")
     private String sandboxBaseUrl;
 
     public SandboxExecutionResponse requestExecution(SandboxExecutionRequest request) {

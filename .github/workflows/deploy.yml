@@ -57,5 +57,6 @@ jobs:
             export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
             export GIT_CLIENT_ID="${{ secrets.GIT_CLIENT_ID }}"
             export GIT_CLIENT_SECRET="${{ secrets.GIT_CLIENT_SECRET }}"
+            export SANDBOX_URL="${{ secrets.SANDBOX_URL }}"
             cd ~/app
             bash deploy.sh
