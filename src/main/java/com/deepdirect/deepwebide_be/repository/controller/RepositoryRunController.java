@@ -1,8 +1,6 @@
 package com.deepdirect.deepwebide_be.repository.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
-import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
-import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
@@ -17,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.util.Map;
 
