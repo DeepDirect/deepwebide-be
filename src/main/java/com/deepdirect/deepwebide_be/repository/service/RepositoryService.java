@@ -54,14 +54,6 @@ public class RepositoryService {
 
         Repository savedRepository = repositoryRepository.save(repository);
 
-        PortRegistry availablePort = portRegistryRepository
-                .findFirstByStatusOrderByPortAsc(PortStatus.AVAILABLE)
-                .orElseThrow(() -> new GlobalException(
-                        ErrorCode.NO_AVAILABLE_PORT
-                ));
-        availablePort.assignToRepository(savedRepository);
-        portRegistryRepository.save(availablePort);
-
         RepositoryMember ownerMember = RepositoryMember.builder()
                 .repository(savedRepository)
                 .user(owner)
