@@ -1,6 +1,7 @@
 package com.deepdirect.deepwebide_be.sandbox.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +17,13 @@ public class SandboxLogController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Value("${sandbox.api.base-url}")
+    private String sandboxBaseUrl;
+
     @GetMapping("/logs/{uuid}")
     public ResponseEntity<String> getContainerLogs(@PathVariable String uuid) {
         String containerId = "sandbox-" + uuid;
-        String sandboxUrl = "http://localhost:9090/api/sandbox/logs/" + containerId;
+        String sandboxUrl = sandboxBaseUrl + "/api/sandbox/logs/" + containerId;
 
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(sandboxUrl, String.class);

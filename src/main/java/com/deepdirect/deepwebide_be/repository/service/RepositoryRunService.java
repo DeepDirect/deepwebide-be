@@ -19,6 +19,7 @@ import com.deepdirect.deepwebide_be.sandbox.service.SandboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +48,10 @@ public class RepositoryRunService {
     private final FileNodeRepository fileNodeRepository;
     private final FileContentRepository fileContentRepository;
     private final RunningContainerRepository runningContainerRepository;
-    private final String sandboxBaseUrl = "http://localhost:9090";
     private final RestTemplate restTemplate;
+
+    @Value("${sandbox.api.base-url}")
+    private String sandboxBaseUrl;
 
     @Transactional
     public RepositoryExecuteResponse executeRepository(Long repositoryId, Long userId) {
