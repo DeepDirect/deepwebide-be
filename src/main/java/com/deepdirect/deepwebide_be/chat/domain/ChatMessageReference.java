@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @Builder
 public class ChatMessageReference {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)

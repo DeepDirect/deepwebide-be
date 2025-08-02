@@ -63,7 +63,7 @@ public class ChatMessageWriteService {
         // 2. 참조 저장 (있으면)
         CodeReferenceRequest refRequest = request.getCodeReference();
         ChatMessageReference reference = null;
-        if (refRequest != null && refRequest.getPath() != null) {
+        if (refRequest != null && refRequest.getPath() != null && !refRequest.getPath().isBlank()) {
             reference = referenceRepository.save(ChatMessageReference.builder()
                     .chatMessage(chatMessage)
                     .path(refRequest.getPath())

@@ -30,10 +30,6 @@ public class ChatWebSocketController {
         // 1. WebSocket 세션에서 userId 추출
         Long userId = (Long) headerAccessor.getSessionAttributes().get("userId");
 
-        String username = userRepository.findById(userId).get().getUsername();
-        log.info("WebSocket 메시지 전송: userId={}, username={}", userId, username);
-
-        System.out.println(request.getMessage());
         // 2. 메시지 저장 + DTO 응답 변환
         ChatMessageBroadcast broadcast = chatMessageWriteService.saveChatMessage(userId, request);
 

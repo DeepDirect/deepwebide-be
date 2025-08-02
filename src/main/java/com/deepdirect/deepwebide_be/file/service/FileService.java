@@ -66,6 +66,9 @@ public class FileService {
                 if (parent != null) parent.getChildren().add(node);
             }
         }
+
+        sortChildrenRecursively(roots);
+
         return roots;
     }
 
@@ -502,6 +505,20 @@ public class FileService {
                 "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9");
         if (reserved.contains(name.toUpperCase()))
             throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_RESERVED);
+    }
+
+    private void sortChildrenRecursively(List<FileTreeNodeResponse> nodes) {
+        if (nodes == null) return;
+        nodes.sort(
+                Comparator
+                        // FOLDER가 먼저 오도록 (폴더면 false, 파일이면 true)
+                        .comparing((FileTreeNodeResponse n) -> !n.getFileType().equalsIgnoreCase("FOLDER"))
+                        // 이름 오름차순(대소문자 무시)
+                        .thenComparing(FileTreeNodeResponse::getFileName, String.CASE_INSENSITIVE_ORDER)
+        );
+        for (FileTreeNodeResponse node : nodes) {
+            sortChildrenRecursively(node.getChildren());
+        }
     }
 
 }
