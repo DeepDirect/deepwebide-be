@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
 @Service
@@ -70,45 +71,38 @@ public class FileService {
 
     @Transactional
     public FileNodeResponse createFileOrFolder(Long repositoryId, Long userId, FileCreateRequest req) {
-
-        if (req.getParentId() == null) {
-            throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
-        }
+        if (req.getParentId() == null) throw new GlobalException(ErrorCode.PARENT_ID_REQUIRED);
 
         if ("FILE".equals(req.getFileType())) {
-            validateFileNameHasExtension(req.getFileName());
+            validateFileName(req.getFileName());
+        } else if ("FOLDER".equals(req.getFileType())) {
+            validateFolderName(req.getFileName());
+        } else {
+            throw new GlobalException(ErrorCode.INVALID_FILE_TYPE);
         }
 
-        // 1. 레포 권한 체크
+        if (!repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent())
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+
         Repository repo = repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
-        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
-        if (!hasAccess) {
-            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
-        }
-
-        // 2. 부모 폴더 체크 (없으면 null)
         FileNode parent = null;
         String parentPath = "";
         if (req.getParentId() != null) {
             parent = findFileNodeWithRepositoryCheck(repositoryId, req.getParentId());
-            if (!parent.getFileType().equals(FileType.FOLDER)) {
+            if (!parent.getFileType().equals(FileType.FOLDER))
                 throw new GlobalException(ErrorCode.INVALID_PARENT_TYPE);
-            }
             parentPath = parent.getPath();
         }
 
-        // 3. 중복 이름 체크 (동일 폴더 하위에 동일 이름)
         if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
                 repositoryId, req.getParentId(), req.getFileName())) {
             throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
         }
 
-        // 4. 경로 계산
         String newPath = parentPath.isEmpty() ? req.getFileName() : parentPath + "/" + req.getFileName();
 
-        // 5. FileNode 저장
         FileNode fileNode = FileNode.builder()
                 .repository(repo)
                 .name(req.getFileName())
@@ -118,7 +112,6 @@ public class FileService {
                 .build();
         fileNode = fileNodeRepository.save(fileNode);
 
-        // 6. 파일이면 내용도 생성 (빈 파일)
         if (fileNode.getFileType() == FileType.FILE) {
             FileContent content = FileContent.builder()
                     .fileNode(fileNode)
@@ -127,7 +120,6 @@ public class FileService {
             fileContentRepository.save(content);
         }
 
-        // 7. 응답 DTO 반환
         return FileNodeResponse.builder()
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
@@ -137,36 +129,30 @@ public class FileService {
                 .build();
     }
 
+
     @Transactional
     public FileRenameResponse renameFileOrFolder(Long repositoryId, Long fileId, Long userId, String newFileName) {
-        // 1. 권한/레포 체크
+        if (!repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent())
+            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
+
         repositoryRepository.findByIdAndDeletedAtIsNull(repositoryId)
                 .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
-
-        boolean hasAccess = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId).isPresent();
-        if (!hasAccess) {
-            throw new GlobalException(ErrorCode.REPOSITORY_ACCESS_DENIED);
-        }
 
         FileNode fileNode = findFileNodeWithRepositoryCheck(repositoryId, fileId);
 
         if (fileNode.getFileType() == FileType.FILE) {
-            validateFileNameHasExtension(newFileName);
+            validateFileName(newFileName);
+        } else {
+            validateFolderName(newFileName);
         }
 
-        // 2. 같은 폴더 내에 동일 이름 존재 체크
-        Long parentId = (fileNode.getParent() == null) ? null : fileNode.getParent().getId();
-        boolean isDuplicate = fileNodeRepository.existsByRepositoryIdAndParentIdAndName(
-                repositoryId, parentId, newFileName);
-        if (isDuplicate) throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
+        Long parentId = fileNode.getParent() == null ? null : fileNode.getParent().getId();
+        if (fileNodeRepository.existsByRepositoryIdAndParentIdAndName(repositoryId, parentId, newFileName))
+            throw new GlobalException(ErrorCode.DUPLICATE_FILE_NAME);
 
-        // 3. 이름 변경 + 경로(path) 재계산
         fileNode.rename(newFileName);
-
-        // 4. 하위 모든 파일/폴더 경로(path)도 재귀적으로 수정 (폴더일 경우)
         updateChildPathsRecursively(fileNode);
 
-        // 5. 결과 반환
         return FileRenameResponse.builder()
                 .fileId(fileNode.getId())
                 .fileName(fileNode.getName())
@@ -441,6 +427,81 @@ public class FileService {
         if (fileName == null || !fileName.contains(".") || fileName.startsWith(".") || fileName.endsWith(".")) {
             throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
         }
+    }
+    private void validateFileName(String name) {
+        if (name.startsWith(" ") || name.endsWith(" ") || name.contains(" "))
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_WHITESPACE);
+
+        if (Pattern.compile("[ㄱ-ㅎㅏ-ㅣ가-힣]").matcher(name).find())
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_KOREAN);
+
+        if (!Pattern.matches("^[a-zA-Z0-9._-]{1,255}$", name))
+            throw new GlobalException(ErrorCode.EMPTY_FILE_NAME);
+
+        if (name.matches("[.]+"))
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_ONLY_DOTS);
+
+        if (name.endsWith("."))
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_ENDS_WITH_DOT);
+
+        if (name.contains(".."))
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_CONTAINS_DOUBLE_DOT);
+
+        if (name.startsWith(".") && name.length() == 1)
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_ONLY_DOTS);
+
+        String[] parts = name.split("\\.");
+        if (parts.length < 2) throw new GlobalException(ErrorCode.FILE_EXTENSION_REQUIRED);
+
+        if (parts.length > 3) {
+            throw new GlobalException(ErrorCode.INVALID_FILE_EXTENSION);
+        }
+        String extension = parts[parts.length - 1];
+        if (extension.length() < 1 || extension.length() > 10)
+            throw new GlobalException(ErrorCode.INVALID_FILE_EXTENSION);
+
+        String namePart = String.join(".", Arrays.copyOf(parts, parts.length - 1));
+        if (namePart.isEmpty())
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME);
+
+        List<String> reserved = List.of("CON", "PRN", "AUX", "NUL",
+                "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9");
+        if (reserved.contains(name.toUpperCase()) || reserved.contains(namePart.toUpperCase()))
+            throw new GlobalException(ErrorCode.INVALID_FILE_NAME_RESERVED);
+    }
+
+    private void validateFolderName(String name) {
+        if (name.length() < 1 || name.length() > 100)
+            throw new GlobalException(ErrorCode.EMPTY_FOLDER_NAME);
+        if (Pattern.compile("[ㄱ-ㅎㅏ-ㅣ가-힣]").matcher(name).find())
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_KOREAN);
+        if (name.startsWith(" ") || name.endsWith(" ") || name.contains(" "))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_WHITESPACE);
+        if (name.equals(".") || name.equals("..") || name.startsWith(".."))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_ONLY_DOTS);
+        if (name.matches("[.]+"))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_ONLY_DOTS);
+        if (name.endsWith("."))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_ONLY_DOTS);
+        if (name.contains(".."))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_ONLY_DOTS);
+
+        if (name.contains(".")) {
+            if (!name.startsWith("."))
+                throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_CONTAINS_DOT);
+            if (name.length() < 2)
+                throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_HIDDEN_BUT_INVALID);
+        }
+
+        if (!Pattern.matches("^[a-zA-Z0-9._-]+$", name))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME);
+
+        List<String> reserved = List.of("CON", "PRN", "AUX", "NUL",
+                "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9");
+        if (reserved.contains(name.toUpperCase()))
+            throw new GlobalException(ErrorCode.INVALID_FOLDER_NAME_RESERVED);
     }
 
 }
