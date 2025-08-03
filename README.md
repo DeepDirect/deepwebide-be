@@ -2,19 +2,19 @@
 This project provides a bakend implementation for DeepDirect using Spring Boot, JWT security, WebSocket (STOMP), Redis pub/sub, and MySQL.
 
 ## Tech Stack
-- Language : Java 17
-- Library & Framework : Spring Boot 3.4.7, Spring Security, Spring Web, Spring WebSocket, Spring Data JPA, Spring Mail
-- Build Tool : Gradle
-- Database : MySQL
-- ORM : JPA(Hibernate)
-- Cache / Message Broker : Redis(Lettuce, pub/sub)
-- Authentication : JWT, OAuth2 (GitHub), Spring Security
-- Dev Tools : Lombok, Swagger, Actuator
-- Message Protocol :  WebSocket + STOMP
-- Third-Party API : Coolsms API
-- Monitoring : Sentry
-- Cloud & Storage : AWS EC2, S3, Route53
-- Deploy : Docker + Nginx, GitHub Action (CI/CD)
+- **Language** : Java 17
+- **Library & Framework** : Spring Boot 3.4.7, Spring Security, Spring Web, Spring WebSocket, Spring Data JPA, Spring Mail
+- **Build Tool** : Gradle
+- **Database** : MySQL
+- **ORM** : JPA(Hibernate)
+- **Cache** / Message Broker : Redis(Lettuce, pub/sub)
+- **Authentication** : JWT, OAuth2 (GitHub), Spring Security
+- **Dev Tools** : Lombok, Swagger, Actuator
+- **Message Protocol** :  WebSocket + STOMP
+- **Third-Party API** : Coolsms API
+- **Monitoring** : Sentry
+- **Cloud & Storage** : AWS EC2, S3, Route53
+- **Deploy** : Docker + Nginx, GitHub Action (CI/CD)
 
 ---
 
