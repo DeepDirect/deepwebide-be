@@ -196,6 +196,14 @@ public class RepositoryRunService {
 
             RunningContainer container = containerOpt.get();
 
+            // 포트 정보 해제 로직 추가
+            Optional<PortRegistry> portRegistryOpt = portRegistryRepository.findByRepositoryId(repositoryId);
+            portRegistryOpt.ifPresent(portRegistry -> {
+                portRegistry.release();
+                portRegistryRepository.save(portRegistry);
+                log.info("Released port {} for repository {}", portRegistry.getPort(), repositoryId);
+            });
+
             // 샌드박스 서버에 중지 요청
             boolean success = sandboxService.stopContainer(container.getUuid());
 
