@@ -2,7 +2,6 @@ package com.deepdirect.deepwebide_be.repository.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
-import com.deepdirect.deepwebide_be.global.security.JwtTokenProvider;
 import com.deepdirect.deepwebide_be.repository.domain.RepositoryMemberRole;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryCreateRequest;
 import com.deepdirect.deepwebide_be.repository.dto.request.RepositoryRenameRequest;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.*;
 public class RepositoryController {
 
     private final RepositoryService repositoryService;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping
     @Operation(summary = "레포지토리 생성", description = "사용자가 개인 레포지토리를 생성합니다.")
