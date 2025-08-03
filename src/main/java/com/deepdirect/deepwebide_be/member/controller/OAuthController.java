@@ -47,7 +47,7 @@ public class OAuthController {
                         window.opener.postMessage({
                             type: 'GITHUB_LOGIN_SUCCESS',
                             response: %s
-                        }, 'http://localhost:5173');
+                        }, 'https://www.deepdirect.site');
                         window.close();
                     }
                 </script>
@@ -70,7 +70,7 @@ public class OAuthController {
                     window.opener.postMessage({
                         type: 'GITHUB_LOGIN_ERROR',
                         error: '%s'
-                    }, 'http://localhost:5173');
+                    }, 'https://www.deepdirect.site');
                     window.close();
                 }
             </script>
