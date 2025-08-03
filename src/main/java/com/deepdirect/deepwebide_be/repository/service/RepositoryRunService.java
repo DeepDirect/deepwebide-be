@@ -459,9 +459,11 @@ public class RepositoryRunService {
 
             Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
 
+            Integer portValue = containerOpt.map(RunningContainer::getPort).orElse(-1);
+
             if (containerOpt.isEmpty()) {
                 return Map.of(
-                        "port", null,
+                        "port", portValue, // -1로 반환
                         "logs", "실행 중인 컨테이너가 없습니다."
                 );
             }
@@ -486,44 +488,52 @@ public class RepositoryRunService {
                         runningContainerRepository.save(container);
 
                         return Map.of(
-                                "port", null,
+                                "port", portValue,
                                 "logs", "컨테이너가 존재하지 않아 중지되었습니다."
                         );
                     }
 
                     // 정상 응답 - 포트와 로그만 반환
                     String logs = extractLogs(response);
+                    if (logs == null) logs = "";
                     return Map.of(
-                            "port", container.getPort(),
+                            "port", portValue,
                             "logs", logs
                     );
                 }
 
                 return Map.of(
-                        "port", container.getPort(),
+                        "port", portValue,
                         "logs", "로그를 가져올 수 없습니다."
                 );
 
             } catch (Exception httpEx) {
                 log.error("HTTP request failed - url: {}", url, httpEx);
 
+                String msg = httpEx.getMessage();
+                if (msg == null) msg = "알 수 없는 오류";
+
                 // HTTP 오류 시에도 컨테이너 상태 확인
-                if (httpEx.getMessage().contains("404") || httpEx.getMessage().contains("Not Found")) {
+                if (msg.contains("404") || msg.contains("Not Found")) {
                     container.stop();
                     runningContainerRepository.save(container);
                 }
 
                 return Map.of(
-                        "port", container.getPort(),
-                        "logs", "로그 조회 중 오류가 발생했습니다: " + httpEx.getMessage()
+                        "port", portValue,
+                        "logs", "로그 조회 중 오류가 발생했습니다: " + msg
                 );
             }
 
         } catch (Exception e) {
             log.error("Failed to get repository logs: {}", repositoryId, e);
+
+            String msg = e.getMessage();
+            if (msg == null) msg = "알 수 없는 오류";
+
             return Map.of(
-                    "port", null,
-                    "logs", "오류가 발생했습니다: " + e.getMessage()
+                    "port", -1,
+                    "logs", "오류가 발생했습니다: " + msg
             );
         }
     }
