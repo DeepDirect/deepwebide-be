@@ -9,8 +9,8 @@ import java.util.Optional;
 
 public interface PortRegistryRepository extends JpaRepository<PortRegistry, Long> {
 
-    Optional<PortRegistry> findFirstByStatusOrderByPortAsc(PortStatus status);
-
     Optional<PortRegistry> findByRepository(Repository repository);
     Optional<PortRegistry> findFirstByStatus(PortStatus status);
+    Optional<PortRegistry> findByRepositoryId(Long repositoryId);
+
 }
