@@ -20,12 +20,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 
 import java.io.*;
@@ -195,6 +193,14 @@ public class RepositoryRunService {
             }
 
             RunningContainer container = containerOpt.get();
+
+            // 포트 정보 해제 로직 추가
+            Optional<PortRegistry> portRegistryOpt = portRegistryRepository.findByRepositoryId(repositoryId);
+            portRegistryOpt.ifPresent(portRegistry -> {
+                portRegistry.release();
+                portRegistryRepository.save(portRegistry);
+                log.info("Released port {} for repository {}", portRegistry.getPort(), repositoryId);
+            });
 
             // 샌드박스 서버에 중지 요청
             boolean success = sandboxService.stopContainer(container.getUuid());
@@ -446,9 +452,11 @@ public class RepositoryRunService {
 
             Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
 
+            Integer portValue = containerOpt.map(RunningContainer::getPort).orElse(-1);
+
             if (containerOpt.isEmpty()) {
                 return Map.of(
-                        "port", null,
+                        "port", portValue, // -1로 반환
                         "logs", "실행 중인 컨테이너가 없습니다."
                 );
             }
@@ -473,44 +481,52 @@ public class RepositoryRunService {
                         runningContainerRepository.save(container);
 
                         return Map.of(
-                                "port", null,
+                                "port", portValue,
                                 "logs", "컨테이너가 존재하지 않아 중지되었습니다."
                         );
                     }
 
                     // 정상 응답 - 포트와 로그만 반환
                     String logs = extractLogs(response);
+                    if (logs == null) logs = "";
                     return Map.of(
-                            "port", container.getPort(),
+                            "port", portValue,
                             "logs", logs
                     );
                 }
 
                 return Map.of(
-                        "port", container.getPort(),
+                        "port", portValue,
                         "logs", "로그를 가져올 수 없습니다."
                 );
 
             } catch (Exception httpEx) {
                 log.error("HTTP request failed - url: {}", url, httpEx);
 
+                String msg = httpEx.getMessage();
+                if (msg == null) msg = "알 수 없는 오류";
+
                 // HTTP 오류 시에도 컨테이너 상태 확인
-                if (httpEx.getMessage().contains("404") || httpEx.getMessage().contains("Not Found")) {
+                if (msg.contains("404") || msg.contains("Not Found")) {
                     container.stop();
                     runningContainerRepository.save(container);
                 }
 
                 return Map.of(
-                        "port", container.getPort(),
-                        "logs", "로그 조회 중 오류가 발생했습니다: " + httpEx.getMessage()
+                        "port", portValue,
+                        "logs", "로그 조회 중 오류가 발생했습니다: " + msg
                 );
             }
 
         } catch (Exception e) {
             log.error("Failed to get repository logs: {}", repositoryId, e);
+
+            String msg = e.getMessage();
+            if (msg == null) msg = "알 수 없는 오류";
+
             return Map.of(
-                    "port", null,
-                    "logs", "오류가 발생했습니다: " + e.getMessage()
+                    "port", -1,
+                    "logs", "오류가 발생했습니다: " + msg
             );
         }
     }
@@ -534,6 +550,19 @@ public class RepositoryRunService {
 
         String result = combinedLogs.toString();
         return result.isEmpty() ? "로그가 없습니다." : result;
+    }
+
+    @Transactional
+    public void stopIfTimeout(Long repositoryId, String uuid) {
+        Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
+        if (containerOpt.isPresent() && "RUNNING".equals(containerOpt.get().getStatus())) {
+            log.info("자동 중지 조건 충족: repositoryId={}, uuid={}", repositoryId, uuid);
+            Repository repo = repositoryRepository.findById(repositoryId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+            stopRepository(repositoryId, repo.getOwner().getId());
+        } else {
+            log.info("이미 중지된 컨테이너: repositoryId={}, uuid={}", repositoryId, uuid);
+        }
     }
 
     private Map<String, Object> createContainerInfo(RunningContainer container, String actualStatus) {
