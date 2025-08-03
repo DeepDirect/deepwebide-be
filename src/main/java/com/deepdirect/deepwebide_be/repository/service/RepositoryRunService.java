@@ -20,18 +20,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -53,26 +53,33 @@ public class RepositoryRunService {
     @Value("${sandbox.api.base-url}")
     private String sandboxBaseUrl;
 
-    // === 컨테이너 실행 ===
     @Transactional
     public RepositoryExecuteResponse executeRepository(Long repositoryId, Long userId) {
         log.info("Starting repository execution - repositoryId: {}, userId: {}", repositoryId, userId);
 
         File zipFile = null;
         try {
+            // 1. 기존 실행 중인 컨테이너 중지 요청
             stopExistingContainer(repositoryId);
 
+            // 2. 권한 체크 & 레포지토리 조회
             Repository repo = repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
                     .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
+            // 3. framework, port 등 정보 추출
             String framework = convertTypeToFramework(repo.getRepositoryType());
-            Integer port = allocateOrGetPort(repo); // 랜덤 할당
+            Integer port = allocateOrGetPort(repo);
 
+            // 4. 새로운 UUID 생성
             String uuid = UUID.randomUUID().toString();
 
+            // 5. 파일트리를 zip으로 변환
             zipFile = fileTreeToZip(repositoryId, uuid);
+
+            // 6. S3 업로드
             String s3Url = uploadToS3(zipFile, uuid);
 
+            // 7. 샌드박스 실행 요청
             SandboxExecutionRequest request = SandboxExecutionRequest.builder()
                     .uuid(uuid)
                     .url(s3Url)
@@ -82,10 +89,8 @@ public class RepositoryRunService {
 
             SandboxExecutionResponse result = sandboxService.requestExecution(request);
 
+            // 8. 실행 중인 컨테이너 정보 저장
             saveRunningContainer(repositoryId, uuid, "sandbox-" + uuid, port, framework, s3Url);
-
-            // **컨테이너 10분 후 자동 만료 비동기 스케줄**
-            scheduleAutoStopAndRelease(uuid, port);
 
             log.info("Repository execution completed - repositoryId: {}, uuid: {}, port: {}", repositoryId, uuid, port);
 
@@ -111,46 +116,6 @@ public class RepositoryRunService {
             cleanupTempFile(zipFile);
         }
     }
-
-    // === 컨테이너 만료 비동기 스케줄 ===
-    @Async
-    public void scheduleAutoStopAndRelease(String uuid, Integer port) {
-        try {
-            Thread.sleep(600_000); // 10분 대기
-
-            boolean stopped = sandboxService.stopContainer(uuid);
-            if (stopped) {
-                RunningContainer container = runningContainerRepository.findByUuid(uuid).orElse(null);
-                if (container != null) {
-                    container.stop();
-                    runningContainerRepository.save(container);
-
-                    PortRegistry portReg = portRegistryRepository.findByPort(port).orElse(null);
-                    if (portReg != null) {
-                        portReg.release();
-                        portRegistryRepository.save(portReg);
-                    }
-                }
-                log.info("컨테이너 {}가 만료되어 중지 및 포트 {} 반납 완료", uuid, port);
-            }
-        } catch (Exception e) {
-            log.error("컨테이너 만료 자동 중지 실패 - uuid: {}", uuid, e);
-        }
-    }
-
-    // === 만료 컨테이너 1분마다 백업성 스케줄 ===
-    @Scheduled(fixedDelay = 60_000)
-    public void autoCleanupExpiredContainers() {
-        LocalDateTime now = LocalDateTime.now();
-        List<RunningContainer> expired = runningContainerRepository
-                .findAllByStatusAndCreatedAtBefore("RUNNING", now.minusMinutes(10));
-        for (RunningContainer container : expired) {
-            log.info("자동정리: 10분 초과 컨테이너 발견 {}", container.getUuid());
-            stopRepository(container.getRepositoryId(), null);
-        }
-    }
-
-
 
     /**
      * 기존 실행 중인 컨테이너 중지
@@ -193,7 +158,8 @@ public class RepositoryRunService {
                                      Integer port, String framework, String s3Url) {
         try {
             RunningContainer container = RunningContainer.builder()
-                    .repositoryId(repositoryId).uuid(uuid)
+                    .repositoryId(repositoryId)
+                    .uuid(uuid)
                     .containerName(containerName)
                     .port(port)
                     .status("RUNNING")
@@ -217,16 +183,9 @@ public class RepositoryRunService {
     @Transactional
     public boolean stopRepository(Long repositoryId, Long userId) {
         try {
-            // userId가 null이 아니면 권한 체크, null이면 skip
-            if (userId != null) {
-                repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
-                        .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
-            } else {
-                // 그냥 존재하는지 체크 (없으면 그냥 진행)
-                if (!repositoryRepository.findById(repositoryId).isPresent()) {
-                    log.warn("stopRepository: repositoryId={} not found, but will cleanup container/port anyway.", repositoryId);
-                }
-            }
+            // 권한 체크
+            repositoryRepository.findByIdAndMemberOrOwner(repositoryId, userId)
+                    .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
 
             Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
 
@@ -243,18 +202,10 @@ public class RepositoryRunService {
             if (success) {
                 container.stop();
                 runningContainerRepository.save(container);
-
-                // 포트 반납도 여기서!
-                PortRegistry portReg = portRegistryRepository.findByPort(container.getPort()).orElse(null);
-                if (portReg != null) {
-                    portReg.release();
-                    portRegistryRepository.save(portReg);
-                }
-
                 log.info("Successfully stopped repository: {} (uuid: {})", repositoryId, container.getUuid());
             }
 
-            return true;
+            return success;
 
         } catch (Exception e) {
             log.error("Failed to stop repository: {}", repositoryId, e);
@@ -313,7 +264,6 @@ public class RepositoryRunService {
         };
     }
 
-    // === 랜덤 포트 할당 방식으로 수정 ===
     private Integer allocateOrGetPort(Repository repo) {
         return portRegistryRepository.findByRepository(repo)
                 .map(PortRegistry::getPort)
@@ -323,18 +273,16 @@ public class RepositoryRunService {
     @Transactional
     public PortRegistry allocateNewPortForRepository(Repository repo) {
         log.debug("Allocating new port for repository: {}", repo.getId());
-        List<PortRegistry> availablePorts = portRegistryRepository.findAllByStatus(PortStatus.AVAILABLE);
 
-        if (availablePorts.isEmpty()) {
-            throw new GlobalException(ErrorCode.NO_AVAILABLE_PORT);
-        }
+        // 1. 사용 가능한 포트 목록 조회 (status == AVAILABLE)
+        PortRegistry available = portRegistryRepository.findFirstByStatus(PortStatus.AVAILABLE)
+                .orElseThrow(() -> new GlobalException(ErrorCode.NO_AVAILABLE_PORT));
 
-        Collections.shuffle(availablePorts);
-        PortRegistry selected = availablePorts.get(0);
-        selected.assignToRepository(repo);
-        PortRegistry savedRegistry = portRegistryRepository.save(selected);
+        // 2. 해당 포트 할당/저장
+        available.assignToRepository(repo);
+        PortRegistry savedRegistry = portRegistryRepository.save(available);
 
-        log.info("Port {} allocated to repository {}", selected.getPort(), repo.getId());
+        log.info("Port {} allocated to repository {}", available.getPort(), repo.getId());
         return savedRegistry;
     }
 
