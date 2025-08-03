@@ -22,7 +22,6 @@ This project provides a bakend implementation for DeepDirect using Spring Boot, 
 These environment variables are required for local development and production deployments.
 Sensitive values should never be exposed publicly--make sure they are securely managed through a `.env` file or a secure environment configuration system.
 
-
 ```env
 # ✅ Redis
 SPRING_REDIS_HOST=localhost
