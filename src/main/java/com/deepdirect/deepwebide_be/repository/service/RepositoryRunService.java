@@ -6,6 +6,7 @@ import com.deepdirect.deepwebide_be.file.repository.FileContentRepository;
 import com.deepdirect.deepwebide_be.file.repository.FileNodeRepository;
 import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
 import com.deepdirect.deepwebide_be.global.exception.GlobalException;
+import com.deepdirect.deepwebide_be.member.domain.User;
 import com.deepdirect.deepwebide_be.repository.domain.*;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
@@ -91,6 +93,9 @@ public class RepositoryRunService {
 
             // 8. 실행 중인 컨테이너 정보 저장
             saveRunningContainer(repositoryId, uuid, "sandbox-" + uuid, port, framework, s3Url);
+
+            // **자동 중지 타이머 시작**
+            scheduleAutoStop(repositoryId, uuid, 10);
 
             log.info("Repository execution completed - repositoryId: {}, uuid: {}, port: {}", repositoryId, uuid, port);
 
@@ -542,6 +547,29 @@ public class RepositoryRunService {
 
         String result = combinedLogs.toString();
         return result.isEmpty() ? "로그가 없습니다." : result;
+    }
+
+    @Async
+    public void scheduleAutoStop(Long repositoryId, String uuid, int timeoutMinutes) {
+        try {
+            log.info("컨테이너 {}에 대해 {}분 후 자동 중지 예약", uuid, timeoutMinutes);
+            Thread.sleep(timeoutMinutes * 60 * 1000L); // 10분 대기
+
+            // 여기서 상태 한번 더 체크 후 중지
+            Optional<RunningContainer> containerOpt = runningContainerRepository.findByRepositoryId(repositoryId);
+            if (containerOpt.isPresent() && containerOpt.get().getStatus().equals("RUNNING")) {
+                log.info("10분 경과 - 컨테이너 {} 자동 중지 시도", uuid);
+
+                Repository repository = repositoryRepository.findById(repositoryId)
+                        .orElseThrow(() -> new GlobalException(ErrorCode.REPOSITORY_NOT_FOUND));
+
+                stopRepository(repositoryId, repository.getOwner().getId());
+            } else {
+                log.info("컨테이너 {}는 이미 중지됨 - 자동 중지 스킵", uuid);
+            }
+        } catch (InterruptedException e) {
+            log.info("자동 중지 타이머 인터럽트 발생: {}", e.getMessage());
+        }
     }
 
     private Map<String, Object> createContainerInfo(RunningContainer container, String actualStatus) {
