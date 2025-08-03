@@ -1,13 +1,11 @@
 package com.deepdirect.deepwebide_be.repository.controller;
 
 import com.deepdirect.deepwebide_be.global.dto.ApiResponseDto;
-import com.deepdirect.deepwebide_be.global.exception.ErrorCode;
-import com.deepdirect.deepwebide_be.global.exception.GlobalException;
 import com.deepdirect.deepwebide_be.global.security.CustomUserDetails;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryExecuteResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStatusResponse;
 import com.deepdirect.deepwebide_be.repository.dto.response.RepositoryStopResponse;
-import com.deepdirect.deepwebide_be.repository.repository.RepositoryRepository;
+import com.deepdirect.deepwebide_be.repository.service.AutoStopSchedulerService;
 import com.deepdirect.deepwebide_be.repository.service.RepositoryRunService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +28,7 @@ import java.util.Map;
 public class RepositoryRunController {
 
     private final RepositoryRunService repositoryRunService;
-    private final RepositoryRepository repositoryRepository;
+    private final AutoStopSchedulerService autoStopSchedulerService;
 
     @PostMapping("/{repositoryId}/execute")
     @Operation(summary = "레포지토리 실행", description = "레포지토리를 실행하고 실행 결과를 반환합니다.")
@@ -39,6 +37,7 @@ public class RepositoryRunController {
             @PathVariable Long repositoryId
     ) {
         RepositoryExecuteResponse resp = repositoryRunService.executeRepository(repositoryId, userDetails.getId());
+        autoStopSchedulerService.scheduleAutoStop(repositoryId, resp.getUuid(), 10);
         return ResponseEntity.ok(ApiResponseDto.of(200, "레포지토리 실행 요청 완료", resp));
     }
 
